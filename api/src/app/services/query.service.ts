@@ -805,7 +805,7 @@ export class QueryService {
       return [];
     }
 
-    const startTimestamp = latestTimestamp - 90 * 24 * 60 * 60 * 1000;
+    const startTimestamp = latestTimestamp - 180 * 24 * 60 * 60 * 1000;
     const timestamps = this.buildDailyBacktestTimestamps(
       startTimestamp,
       latestTimestamp,

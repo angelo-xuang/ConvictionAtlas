@@ -997,7 +997,7 @@ export class SourceIngestionService {
     const url = this.buildUrl(baseUrl, `coins/${coinId}/market_chart`);
 
     url.searchParams.set('vs_currency', 'usd');
-    url.searchParams.set('days', '90');
+    url.searchParams.set('days', '180');
     url.searchParams.set('interval', 'daily');
 
     try {
@@ -1014,7 +1014,7 @@ export class SourceIngestionService {
           pointAt: new Date(Number(timestamp)),
           price: Number(price),
           volume: volumeByTimestamp.get(Number(timestamp)) ?? null,
-          source: 'market_chart_90d',
+          source: 'market_chart_180d',
         }))
         .filter(
           (point) =>

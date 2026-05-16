@@ -1,4 +1,5 @@
 import { Body, Controller, Post } from '@nestjs/common';
+import { BacktestService } from '../services/backtest.service';
 import { ManagerEngineService } from '../services/manager-engine.service';
 import { MemoService } from '../services/memo.service';
 import { PerformanceService } from '../services/performance.service';
@@ -15,6 +16,7 @@ export class InternalController {
     private readonly portfolioService: PortfolioService,
     private readonly performanceService: PerformanceService,
     private readonly memoService: MemoService,
+    private readonly backtestService: BacktestService,
   ) {}
 
   @Post('bootstrap')
@@ -75,5 +77,10 @@ export class InternalController {
   @Post('memos/generate')
   generateMemos(@Body() payload?: { managerSlug?: string }) {
     return this.memoService.generateMemos(payload?.managerSlug);
+  }
+
+  @Post('backtest/run')
+  runBacktest(@Body() payload?: { days?: number }) {
+    return this.backtestService.runBacktest(payload?.days ?? 180);
   }
 }
