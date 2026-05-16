@@ -137,16 +137,15 @@ export class BacktestService {
     const navHistory: number[] = [100];
     const dailyReturns: number[] = [];
 
-    // Pre-compute BTC trend for market regime filter
+    // Pre-compute BTC reference for MA regime filter
     const btcRef = universe.find((o) => o.title.toLowerCase().includes('bitcoin'));
 
     for (let i = 0; i < timestamps.length - 1; i++) {
       const currentTs = timestamps[i];
       const nextTs = timestamps[i + 1];
 
-      // Market regime filter: go to cash when BTC trend is clearly bearish
-      const btcSignals = btcRef ? this.buildSignalMap(btcRef, currentTs) : null;
-      const regimeOk = btcSignals ? btcSignals.trend_regime > -0.15 : true;
+      // Market regime filter: 20-day MA crossover — invest only when BTC > MA20
+      const regimeOk = btcRef ? this.isAboveMA(btcRef, currentTs, 20) : true;
 
       let candidates: Array<{
         opp: BacktestOpportunity;
@@ -662,5 +661,24 @@ export class BacktestService {
     return type === OpportunityType.TOKEN
       ? clamp(rawReturn, -0.04, 0.06)
       : clamp(rawReturn, -0.08, 0.10) * 0.24;
+  }
+
+  private isAboveMA(
+    opp: BacktestOpportunity,
+    timestamp: number,
+    periodDays: number,
+  ): boolean {
+    const currentPoint = this.getPointAtOrBefore(opp.historyPoints, timestamp);
+    if (!currentPoint) return true;
+
+    const windowStart = timestamp - periodDays * 24 * 60 * 60 * 1000;
+    const windowPoints = opp.historyPoints.filter(
+      (p) => p.pointAt.getTime() >= windowStart && p.pointAt.getTime() <= timestamp,
+    );
+
+    if (windowPoints.length < 5) return true;
+
+    const ma = windowPoints.reduce((s, p) => s + p.price, 0) / windowPoints.length;
+    return currentPoint.price > ma;
   }
 }
