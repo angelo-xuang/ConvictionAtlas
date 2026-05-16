@@ -208,7 +208,7 @@ export class BacktestService {
       });
       const riskScore = riskScores.length ? round(average(riskScores), 4) : 0;
 
-      // Persist snapshot
+      // Persist snapshot (use current time; ordering preserved by sequential IDs)
       const snapshot = await this.prisma.portfolioSnapshot.create({
         data: {
           managerId,
@@ -216,7 +216,6 @@ export class BacktestService {
           grossExposure: round(1 - cashWeight, 4),
           riskScore,
           nav,
-          createdAt: new Date(nextTs),
           positions: {
             create: positionData,
           },
