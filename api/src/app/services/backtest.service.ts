@@ -138,7 +138,7 @@ export class BacktestService {
     const dailyReturns: number[] = [];
 
     // Pre-compute BTC trend for market regime filter
-    const btcRef = universe.find((o) => o.slug.includes('bitcoin'));
+    const btcRef = universe.find((o) => o.title.toLowerCase().includes('bitcoin'));
 
     for (let i = 0; i < timestamps.length - 1; i++) {
       const currentTs = timestamps[i];
@@ -148,19 +148,23 @@ export class BacktestService {
       const btcSignals = btcRef ? this.buildSignalMap(btcRef, currentTs) : null;
       const regimeOk = btcSignals ? btcSignals.trend_regime > -0.15 : true;
 
-      const candidates = regimeOk
-        ? universe
-            .map((opp) => ({ opp, scored: this.scoreOpportunity(blueprint, opp, currentTs) }))
-            .filter(
-              (c): c is { opp: BacktestOpportunity; scored: NonNullable<ReturnType<typeof this.scoreOpportunity>> } =>
-                c.scored !== null && c.scored.score > blueprint.bullishThreshold,
-            )
-            .sort((a, b) => b.scored.score - a.scored.score)
-            .slice(0, blueprint.maxPositions)
-        : [];
-        )
-        .sort((a, b) => b.scored.score - a.scored.score)
-        .slice(0, blueprint.maxPositions);
+      let candidates: Array<{
+        opp: BacktestOpportunity;
+        scored: NonNullable<ReturnType<typeof this.scoreOpportunity>>;
+      }>;
+
+      if (!regimeOk) {
+        candidates = [];
+      } else {
+        candidates = universe
+          .map((opp) => ({ opp, scored: this.scoreOpportunity(blueprint, opp, currentTs) }))
+          .filter(
+            (c): c is { opp: BacktestOpportunity; scored: NonNullable<ReturnType<typeof this.scoreOpportunity>> } =>
+              c.scored !== null && c.scored.score > blueprint.bullishThreshold,
+          )
+          .sort((a, b) => b.scored.score - a.scored.score)
+          .slice(0, blueprint.maxPositions);
+      }
 
       const investableCapital = candidates.length ? 1 - blueprint.cashFloor : 0;
       const scoreTotal =

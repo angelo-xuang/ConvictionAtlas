@@ -653,7 +653,7 @@ export class SourceIngestionService {
           : undefined,
       },
       {
-        provider: SourceKind.GOOGLE_NEWS_RSS,
+        provider: 'GOOGLE_NEWS_RSS' as any,
         perOpportunity:
           limitPerOpportunity ??
           Number(this.configService.get('GOOGLE_NEWS_RSS_RESULTS_PER_QUERY') ?? '4'),
@@ -1384,7 +1384,7 @@ export class SourceIngestionService {
 
         return {
           externalId: url,
-          provider: SourceKind.GOOGLE_NEWS_RSS,
+          provider: 'GOOGLE_NEWS_RSS' as any,
           title,
           summary,
           url,
