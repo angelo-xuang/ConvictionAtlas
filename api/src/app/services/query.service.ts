@@ -838,37 +838,35 @@ export class QueryService {
 
       const candidates = regimeOk
         ? universe
-            .map((opportunity) =>
-              this.scoreHistoricalOpportunity(
+            .map((opportunity) => ({
+              opp: opportunity,
+              scored: this.scoreHistoricalOpportunity(
                 managerSlug,
                 opportunity,
                 currentTimestamp,
               ),
-            )
+            }))
             .filter(
-              (
-                candidate,
-              ): candidate is {
-                score: number;
-                targetWeight: number;
-                historyPoints: HistoryPointLike[];
-              } => candidate !== null && candidate.score > blueprint.bullishThreshold,
+              (c): c is {
+                opp: ReplayPreparedOpportunity;
+                scored: { score: number; targetWeight: number; historyPoints: HistoryPointLike[] };
+              } => c.scored !== null && c.scored.score > blueprint.bullishThreshold,
             )
-            .sort((left, right) => right.score - left.score)
+            .sort((left, right) => right.scored.score - left.scored.score)
             .slice(0, blueprint.maxPositions)
         : [];
 
       const investableCapital = candidates.length ? 1 - blueprint.cashFloor : 0;
       const scoreTotal =
-        candidates.reduce((sum, candidate) => sum + candidate.targetWeight, 0) || 1;
+        candidates.reduce((sum, candidate) => sum + candidate.scored.targetWeight, 0) || 1;
 
       const intervalReturn = candidates.reduce((sum, candidate) => {
         const startPoint = this.getPointAtOrBefore(
-          candidate.historyPoints,
+          candidate.scored.historyPoints,
           currentTimestamp,
         );
         const endPoint = this.getPointAtOrBefore(
-          candidate.historyPoints,
+          candidate.scored.historyPoints,
           nextTimestamp,
         );
         if (!startPoint || !endPoint || startPoint.price <= 0) {
@@ -876,8 +874,15 @@ export class QueryService {
         }
 
         const weight =
-          (candidate.targetWeight / scoreTotal) * investableCapital;
-        return sum + weight * (endPoint.price / startPoint.price - 1);
+          (candidate.scored.targetWeight / scoreTotal) * investableCapital;
+        const rawReturn = endPoint.price / startPoint.price - 1;
+        const assetReturn = this.computeReplayAssetReturn(
+          managerSlug,
+          candidate.opp.type,
+          startPoint.price,
+          endPoint.price,
+        );
+        return sum + weight * assetReturn;
       }, 0);
 
       nav = round(nav * (1 + intervalReturn), 4);
