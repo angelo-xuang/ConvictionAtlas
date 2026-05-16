@@ -22,27 +22,27 @@ export default function LeaderboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="shell"><p className="muted" style={{ padding: '60px 0' }}>Loading leaderboard...</p></div>;
+  if (loading) return <div className="shell"><p className="muted" style={{ padding: '60px 0' }}>加载中...</p></div>;
 
   return (
     <div className="shell">
       <div className="page-header">
         <div>
           <div className="breadcrumb">
-            <Link href="/">Home</Link><span>/</span><span>Leaderboard</span>
+            <Link href="/">首页</Link><span>/</span><span>排行榜</span>
           </div>
-          <h1>Performance Rankings</h1>
-          <p className="muted text-sm mt-2">Compare managers and opportunities by key metrics.</p>
+          <h1>业绩排行</h1>
+          <p className="muted text-sm mt-2">按关键指标比较经理与投资标的。</p>
         </div>
         <div className="flex gap-3">
-          <div className="stat-item"><span className="stat-value">{managers.length}</span><span className="stat-label">Managers</span></div>
-          <div className="stat-item"><span className="stat-value">{opportunities.length}</span><span className="stat-label">Opportunities</span></div>
+          <div className="stat-item"><span className="stat-value">{managers.length}</span><span className="stat-label">经理</span></div>
+          <div className="stat-item"><span className="stat-value">{opportunities.length}</span><span className="stat-label">标的</span></div>
         </div>
       </div>
 
       <div className="leaderboard-tabs">
-        <button className={`leaderboard-tab ${tab === 'managers' ? 'active' : ''}`} onClick={() => setTab('managers')}>Managers</button>
-        <button className={`leaderboard-tab ${tab === 'opportunities' ? 'active' : ''}`} onClick={() => setTab('opportunities')}>Opportunities</button>
+        <button className={`leaderboard-tab ${tab === 'managers' ? 'active' : ''}`} onClick={() => setTab('managers')}>经理</button>
+        <button className={`leaderboard-tab ${tab === 'opportunities' ? 'active' : ''}`} onClick={() => setTab('opportunities')}>标的</button>
       </div>
 
       {tab === 'managers' && (
@@ -50,12 +50,12 @@ export default function LeaderboardPage() {
           <table>
             <thead>
               <tr>
-                <th>Manager</th>
-                <th>Curve</th>
+                <th>经理</th>
+                <th>曲线</th>
                 <th>NAV</th>
-                <th>Cumulative</th>
+                <th>累计</th>
                 <th>Sharpe</th>
-                <th>Hit Rate</th>
+                <th>命中率</th>
               </tr>
             </thead>
             <tbody>
@@ -89,12 +89,12 @@ export default function LeaderboardPage() {
           <table>
             <thead>
               <tr>
-                <th>Opportunity</th>
-                <th>Price</th>
+                <th>标的</th>
+                <th>价格</th>
                 <th>24h</th>
-                <th>Volume</th>
-                <th>Conviction</th>
-                <th>Signal</th>
+                <th>成交量</th>
+                <th>信念</th>
+                <th>信号</th>
               </tr>
             </thead>
             <tbody>

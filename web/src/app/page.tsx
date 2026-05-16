@@ -2,35 +2,35 @@ import Link from 'next/link';
 import { HeroPerformanceChart } from '../components/hero-performance-chart';
 
 const stats = [
-  { label: 'AI Managers', value: '6', detail: 'Distinct investment styles, risk profiles, and conviction engines.' },
-  { label: 'Data Sources', value: '2+', detail: 'Live crypto prices from CoinGecko and prediction markets from Polymarket.' },
-  { label: 'Assets Tracked', value: '12+', detail: 'Top tokens by market cap plus active crypto prediction markets.' },
+  { label: 'AI 经理', value: '6', detail: '不同的投资风格、风险偏好与信念引擎' },
+  { label: '数据源', value: '2+', detail: 'CoinGecko 加密价格 + Polymarket 预测市场' },
+  { label: '追踪资产', value: '12+', detail: '按市值追踪的主流代币及活跃预测市场' },
 ];
 
 const features = [
   {
     href: '/managers',
     index: '01',
-    eyebrow: 'Portfolios',
-    title: 'AI Manager Portfolios',
-    description: 'Six specialized AI managers with live portfolios, performance curves, and investment memos.',
-    meta: 'NAV · Performance · Positions',
+    eyebrow: '组合',
+    title: 'AI 基金经理组合',
+    description: '六个专业 AI 经理，含实时组合、业绩曲线与投资备忘录。',
+    meta: '净值 · 业绩 · 持仓',
   },
   {
     href: '/opportunities',
     index: '02',
-    eyebrow: 'Markets',
-    title: 'Market Opportunities',
-    description: 'All tracked assets with signal scores, price action, and which managers are bullish or bearish.',
-    meta: 'Tokens · Prediction Markets',
+    eyebrow: '市场',
+    title: '市场机会',
+    description: '所有追踪标的，含信号评分、价格走势与经理观点。',
+    meta: '代币 · 预测市场',
   },
   {
     href: '/leaderboard',
     index: '03',
-    eyebrow: 'Rankings',
-    title: 'Performance Rankings',
-    description: 'Compare managers by NAV, Sharpe ratio, and hit rate. See which opportunities carry the most conviction.',
-    meta: 'Sharpe · Returns · Conviction',
+    eyebrow: '排行',
+    title: '业绩排行',
+    description: '按净值、夏普比率、命中率比较经理。查看哪些标的信念最强。',
+    meta: '夏普 · 收益 · 信念',
   },
 ];
 
@@ -40,29 +40,27 @@ export default function Index() {
       {/* Hero */}
       <section className="landing-hero">
         <div>
-          <span className="eyebrow">AI-Powered Investment Intelligence</span>
+          <span className="eyebrow">AI 驱动的投资智能平台</span>
           <h1>
-            Six AI managers analyzing crypto markets and managing portfolios in real time.
+            六个 AI 基金经理实时分析加密市场并管理投资组合。
           </h1>
           <p>
-            Conviction Atlas runs autonomous investment managers that ingest market data,
-            compute signals, make decisions, and publish their reasoning — all visible
-            through a single interface.
+            Conviction Atlas 运行自主投资经理，采集市场数据、计算信号、做出决策并发布推理过程 — 全部通过一个界面呈现。
           </p>
           <div className="landing-cta-row">
             <Link href="/managers" className="btn btn-primary">
-              View Managers
+              查看经理
             </Link>
             <Link href="/opportunities" className="btn">
-              Browse Markets
+              浏览市场
             </Link>
           </div>
         </div>
 
         <div className="landing-chart-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <span className="eyebrow">Live Performance</span>
-            <span className="badge badge-neutral">6 managers</span>
+            <span className="eyebrow">实时业绩</span>
+            <span className="badge badge-neutral">6 经理</span>
           </div>
           <HeroPerformanceChart />
         </div>
@@ -82,8 +80,8 @@ export default function Index() {
       {/* Feature grid */}
       <section className="section">
         <div className="section-header">
-          <h2>Explore</h2>
-          <span className="muted">Three views into the same data.</span>
+          <h2>探索</h2>
+          <span className="muted">同一数据的三种视角。</span>
         </div>
 
         <div className="feature-grid">
@@ -99,7 +97,7 @@ export default function Index() {
               <p>{f.description}</p>
               <div className="feature-meta">
                 <span>{f.meta}</span>
-                <span style={{ color: 'var(--accent)' }}>Open &rarr;</span>
+                <span style={{ color: 'var(--accent)' }}>查看 &rarr;</span>
               </div>
             </Link>
           ))}

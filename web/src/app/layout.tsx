@@ -5,13 +5,13 @@ import './global.css';
 
 export const metadata = {
   title: 'Conviction Atlas',
-  description: 'AI-powered investment intelligence for crypto markets.',
+  description: 'AI 驱动的加密市场投资智能平台。',
 };
 
 const navItems = [
-  { href: '/managers', label: 'Managers' },
-  { href: '/opportunities', label: 'Opportunities' },
-  { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/managers', label: '基金经理' },
+  { href: '/opportunities', label: '投资机会' },
+  { href: '/leaderboard', label: '排行榜' },
 ];
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <body>
         <div className="shell">
           <header className="topbar">
@@ -39,7 +39,7 @@ export default function RootLayout({
                 rel="noreferrer"
                 className="nav-pill"
               >
-                API Docs
+                API 文档
               </a>
             </nav>
           </header>
@@ -57,7 +57,7 @@ export default function RootLayout({
                 rel="noreferrer"
                 className="nav-pill"
               >
-                API Docs
+                API 文档
               </a>
             </div>
           </nav>

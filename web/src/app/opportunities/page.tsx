@@ -20,32 +20,32 @@ export default function OpportunitiesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="shell"><p className="muted" style={{ padding: '60px 0' }}>Loading opportunities...</p></div>;
+  if (loading) return <div className="shell"><p className="muted" style={{ padding: '60px 0' }}>加载中...</p></div>;
 
   return (
     <div className="shell">
       <div className="page-header">
         <div>
           <div className="breadcrumb">
-            <Link href="/">Home</Link>
+            <Link href="/">首页</Link>
             <span>/</span>
-            <span>Opportunities</span>
+            <span>投资机会</span>
           </div>
-          <h1>Market Opportunities</h1>
-          <p className="muted text-sm mt-2">All tracked tokens and prediction markets with signal scores and price action.</p>
+          <h1>市场机会</h1>
+          <p className="muted text-sm mt-2">所有追踪的代币和预测市场，含信号评分与价格走势。</p>
         </div>
         <div className="flex gap-3">
           <div className="stat-item">
             <span className="stat-value">{opps.length}</span>
-            <span className="stat-label">Total</span>
+            <span className="stat-label">总计</span>
           </div>
           <div className="stat-item">
             <span className="stat-value">{opps.filter(o => o.type === 'TOKEN').length}</span>
-            <span className="stat-label">Tokens</span>
+            <span className="stat-label">代币</span>
           </div>
           <div className="stat-item">
             <span className="stat-value">{opps.filter(o => o.type === 'PREDICTION_MARKET').length}</span>
-            <span className="stat-label">Markets</span>
+            <span className="stat-label">市场</span>
           </div>
         </div>
       </div>
@@ -65,7 +65,7 @@ export default function OpportunitiesPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 className="truncate">{opp.title}</h3>
                   <div className="flex gap-2">
-                    <span className="badge badge-neutral">{opp.type === 'TOKEN' ? 'Token' : 'Prediction'}</span>
+                    <span className="badge badge-neutral">{opp.type === 'TOKEN' ? '代币' : '预测'}</span>
                     <span className="badge badge-neutral">{opp.sourceKind}</span>
                   </div>
                 </div>
@@ -73,7 +73,7 @@ export default function OpportunitiesPage() {
 
               <div className="opp-card-data">
                 <div className="opp-data-item">
-                  <span className="label">Price</span>
+                  <span className="label">价格</span>
                   <span className="value">{formatMoney(opp.currentPrice)}</span>
                 </div>
                 <div className="opp-data-item">
@@ -83,11 +83,11 @@ export default function OpportunitiesPage() {
                   </span>
                 </div>
                 <div className="opp-data-item">
-                  <span className="label">Volume</span>
+                  <span className="label">成交量</span>
                   <span className="value">{formatCompact(opp.volume24h)}</span>
                 </div>
                 <div className="opp-data-item">
-                  <span className="label">Strongest</span>
+                  <span className="label">最强信号</span>
                   <span className="value text-sm">{signal ? formatSignalName(signal.name) : '--'}</span>
                 </div>
               </div>
@@ -99,24 +99,24 @@ export default function OpportunitiesPage() {
       {leaders.length > 0 && (
         <div className="section">
           <div className="section-header">
-            <h2>Leaderboard</h2>
+            <h2>排行榜</h2>
           </div>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Opportunity</th>
-                  <th>Price</th>
+                  <th>标的</th>
+                  <th>价格</th>
                   <th>24h</th>
-                  <th>Volume</th>
-                  <th>Conviction</th>
-                  <th>Signal</th>
+                  <th>成交量</th>
+                  <th>信念</th>
+                  <th>信号</th>
                 </tr>
               </thead>
               <tbody>
                 {leaders.map((l) => (
                   <tr key={l.id}>
-                    <td><strong>{l.title}</strong> <span className="badge badge-neutral text-xs">{l.type === 'TOKEN' ? 'Token' : 'PM'}</span></td>
+                    <td><strong>{l.title}</strong> <span className="badge badge-neutral text-xs">{l.type === 'TOKEN' ? '代币' : 'PM'}</span></td>
                     <td className="tabular">{formatMoney(l.currentPrice)}</td>
                     <td className={`tabular ${l.priceChange24h !== null ? (l.priceChange24h >= 0 ? 'positive' : 'negative') : ''}`}>
                       {formatPercent(l.priceChange24h)}

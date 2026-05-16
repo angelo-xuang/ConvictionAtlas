@@ -38,8 +38,8 @@ export default function OpportunityDetailClient() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div className="shell"><p className="muted" style={{ padding: '60px 0' }}>Loading...</p></div>;
-  if (!detail) return <div className="shell"><div className="error-card">Opportunity not found.</div></div>;
+  if (loading) return <div className="shell"><p className="muted" style={{ padding: '60px 0' }}>加载中...</p></div>;
+  if (!detail) return <div className="shell"><div className="error-card">未找到该标的。</div></div>;
 
   const priceHistoryPoints = history.map(h => h.price).reverse();
   const historyDates = history.map(h => formatDate(h.pointAt)).reverse();
@@ -49,8 +49,8 @@ export default function OpportunityDetailClient() {
       <div className="page-header">
         <div>
           <div className="breadcrumb">
-            <Link href="/">Home</Link><span>/</span>
-            <Link href="/opportunities">Opportunities</Link><span>/</span>
+            <Link href="/">首页</Link><span>/</span>
+            <Link href="/opportunities">投资机会</Link><span>/</span>
             <span>{detail.title}</span>
           </div>
           <div className="flex items-center gap-3 mt-2">
@@ -62,7 +62,7 @@ export default function OpportunityDetailClient() {
             <div>
               <h1>{detail.title}</h1>
               <div className="flex gap-2 mt-2">
-                <span className="badge badge-neutral">{detail.type === 'TOKEN' ? 'Token' : 'Prediction Market'}</span>
+                <span className="badge badge-neutral">{detail.type === 'TOKEN' ? '代币' : '预测市场'}</span>
                 <span className="badge badge-neutral">{detail.sourceKind}</span>
               </div>
             </div>
@@ -71,16 +71,16 @@ export default function OpportunityDetailClient() {
 
         <div className="card" style={{ minWidth: 200 }}>
           <div className="stat-grid">
-            <div className="stat-item"><span className="stat-value">{formatMoney(detail.currentPrice)}</span><span className="stat-label">Price</span></div>
+            <div className="stat-item"><span className="stat-value">{formatMoney(detail.currentPrice)}</span><span className="stat-label">价格</span></div>
             <div className="stat-item"><span className={`stat-value ${detail.priceChange24h !== null ? (detail.priceChange24h >= 0 ? 'positive' : 'negative') : ''}`}>{formatPercent(detail.priceChange24h)}</span><span className="stat-label">24h</span></div>
-            <div className="stat-item"><span className="stat-value">{formatCompact(detail.volume24h)}</span><span className="stat-label">Volume</span></div>
+            <div className="stat-item"><span className="stat-value">{formatCompact(detail.volume24h)}</span><span className="stat-label">成交量</span></div>
           </div>
         </div>
       </div>
 
       {priceHistoryPoints.length > 0 && (
         <div className="card mb-4">
-          <div className="eyebrow mb-2">Price History</div>
+          <div className="eyebrow mb-2">价格历史</div>
           <PerfLine points={priceHistoryPoints} dateLabels={historyDates} height={200} tone={detail.priceChange24h !== null && detail.priceChange24h < 0 ? 'negative' : 'positive'} />
         </div>
       )}
@@ -89,7 +89,7 @@ export default function OpportunityDetailClient() {
         <div className="detail-main">
           {signals.length > 0 && (
             <div className="card">
-              <div className="eyebrow mb-4">Signals ({signals.length})</div>
+              <div className="eyebrow mb-4">信号 ({signals.length})</div>
               <div className="decision-grid">
                 {signals.sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).map(s => (
                   <div key={s.id} className="decision-card">
@@ -98,7 +98,7 @@ export default function OpportunityDetailClient() {
                       <span className={`badge ${s.value >= 0 ? 'badge-positive' : 'badge-negative'}`}>{s.value.toFixed(2)}</span>
                     </div>
                     <div className="flex gap-2 text-xs muted">
-                      <span>Confidence: {(s.confidence * 100).toFixed(0)}%</span>
+                      <span>置信度: {(s.confidence * 100).toFixed(0)}%</span>
                       <span className={`badge ${getDirectionClass(s.direction)}`}>{s.direction}</span>
                     </div>
                   </div>
@@ -109,7 +109,7 @@ export default function OpportunityDetailClient() {
 
           {decisions.length > 0 && (
             <div className="card">
-              <div className="eyebrow mb-4">Manager Views</div>
+              <div className="eyebrow mb-4">经理观点</div>
               <div className="decision-grid">
                 {decisions.map(d => (
                   <div key={d.id} className="decision-card">
@@ -117,7 +117,7 @@ export default function OpportunityDetailClient() {
                       <strong className="text-sm">{d.manager.name}</strong>
                       <span className={`badge ${getDirectionClass(d.direction)}`}>{d.direction}</span>
                     </div>
-                    <div className="text-xs muted mt-2">Conviction: {d.convictionScore.toFixed(2)} | Target: {(d.targetWeight * 100).toFixed(1)}%</div>
+                    <div className="text-xs muted mt-2">信念: {d.convictionScore.toFixed(2)} | 目标: {(d.targetWeight * 100).toFixed(1)}%</div>
                   </div>
                 ))}
               </div>
@@ -126,7 +126,7 @@ export default function OpportunityDetailClient() {
 
           {news.length > 0 && (
             <div className="card">
-              <div className="eyebrow mb-4">News</div>
+              <div className="eyebrow mb-4">新闻</div>
               <div className="flex flex-col gap-3">
                 {news.map(n => (
                   <a key={n.id} href={n.url} target="_blank" rel="noreferrer" className="decision-card" style={{ display: 'block' }}>
@@ -143,10 +143,10 @@ export default function OpportunityDetailClient() {
         <div className="detail-sidebar">
           {history.length > 0 && (
             <div className="card">
-              <div className="eyebrow mb-4">Recent History</div>
+              <div className="eyebrow mb-4">近期历史</div>
               <div className="table-wrap" style={{ border: 'none' }}>
                 <table>
-                  <thead><tr><th>Date</th><th>Price</th><th>Vol</th></tr></thead>
+                  <thead><tr><th>日期</th><th>价格</th><th>量</th></tr></thead>
                   <tbody>
                     {history.slice(0, 10).map(h => (
                       <tr key={h.id}>

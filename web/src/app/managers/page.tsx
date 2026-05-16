@@ -49,7 +49,7 @@ export default function ManagersPage() {
     return (
       <div className="shell">
         <div style={{ padding: '120px 0', textAlign: 'center' }}>
-          <div className="stat-value" style={{ color: 'var(--text-muted)' }}>Loading manager desks...</div>
+          <div className="stat-value" style={{ color: 'var(--text-muted)' }}>加载中...</div>
         </div>
       </div>
     );
@@ -59,7 +59,7 @@ export default function ManagersPage() {
     return (
       <div className="shell">
         <div className="error-card mt-6">
-          Manager data is not available yet. Start the API, run the pipeline, and refresh.
+          经理数据暂不可用，请启动 API、运行管道后刷新。
         </div>
       </div>
     );
@@ -71,24 +71,24 @@ export default function ManagersPage() {
       <div className="page-header">
         <div>
           <div className="breadcrumb">
-            <Link href="/">Home</Link>
+            <Link href="/">首页</Link>
             <span>/</span>
-            <span style={{ color: 'var(--text)' }}>Managers</span>
+            <span style={{ color: 'var(--text)' }}>基金经理</span>
           </div>
-          <h1>AI Managers</h1>
+          <h1>AI 基金经理</h1>
           <p className="muted" style={{ marginTop: 6, maxWidth: 560 }}>
-            Six autonomous desks, each reading one live token tape and crypto prediction surface. Each desk carries its own curve, book map, signal bias, and packaging.
+            六个自主交易台，各自读取实时代币行情和加密预测市场。每个交易台拥有独立的业绩曲线、持仓分布、信号偏好与包装风格。
           </p>
         </div>
         <Link href="/leaderboard" className="btn btn-primary">
-          Leaderboard
+          排行榜
         </Link>
       </div>
 
       {/* Manager grid */}
       {managers.length === 0 ? (
         <div className="error-card">
-          No manager data available. Run the pipeline first.
+          暂无经理数据，请先运行管道。
         </div>
       ) : (
         <div className="manager-grid">
@@ -102,20 +102,20 @@ export default function ManagersPage() {
       {leaderboard.length > 0 && (
         <div className="section">
           <div className="section-header">
-            <h2>Leaderboard</h2>
-            <Link href="/leaderboard" className="muted text-sm">Full leaderboard &rarr;</Link>
+            <h2>排行榜</h2>
+            <Link href="/leaderboard" className="muted text-sm">完整排行 &rarr;</Link>
           </div>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Manager</th>
-                  <th style={{ width: 140 }}>Curve</th>
+                  <th>经理</th>
+                  <th style={{ width: 140 }}>曲线</th>
                   <th>NAV</th>
-                  <th>Cum. Return</th>
-                  <th>Gross</th>
+                  <th>累计收益</th>
+                  <th>总敞口</th>
                   <th>Sharpe</th>
-                  <th>Hit Rate</th>
+                  <th>命中率</th>
                 </tr>
               </thead>
               <tbody>
@@ -199,11 +199,11 @@ function ManagerCard({ manager }: { manager: ManagerSummary }) {
           <div className={`value tabular ${getSignedClass(manager.cumulativeReturn)}`}>
             {formatReturn(manager.cumulativeReturn)}
           </div>
-          <div className="label">Cum. Return</div>
+          <div className="label">累计收益</div>
         </div>
         <div className="metric-item">
           <div className="value tabular">{formatReturn(manager.drawdown)}</div>
-          <div className="label">Drawdown</div>
+          <div className="label">回撤</div>
         </div>
         <div className="metric-item">
           <div className="value tabular">{manager.sharpe.toFixed(2)}</div>
@@ -214,7 +214,7 @@ function ManagerCard({ manager }: { manager: ManagerSummary }) {
       {/* Top positions preview */}
       {topPos.length > 0 && (
         <div style={{ marginTop: 14 }}>
-          <div className="stat-label" style={{ marginBottom: 6 }}>Top Positions</div>
+          <div className="stat-label" style={{ marginBottom: 6 }}>主要持仓</div>
           <div className="positions-list">
             {topPos.map((pos) => (
               <div key={pos.id} className="position-row">

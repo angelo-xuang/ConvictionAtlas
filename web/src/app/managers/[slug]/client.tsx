@@ -61,7 +61,7 @@ export default function ManagerDetailClient({ slug }: Props) {
     return (
       <div className="shell">
         <div style={{ padding: '120px 0', textAlign: 'center' }}>
-          <div className="stat-value" style={{ color: 'var(--text-muted)' }}>Loading...</div>
+          <div className="stat-value" style={{ color: 'var(--text-muted)' }}>加载中...</div>
         </div>
       </div>
     );
@@ -71,7 +71,7 @@ export default function ManagerDetailClient({ slug }: Props) {
     return (
       <div className="shell">
         <div className="error-card mt-6">
-          Manager detail is not available. Confirm the API is running and the pipeline has produced snapshots.
+          经理详情暂不可用，请确认 API 正在运行且管道已生成快照。
         </div>
       </div>
     );
@@ -97,9 +97,9 @@ export default function ManagerDetailClient({ slug }: Props) {
       {/* ── Header ── */}
       <div className="page-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
         <div className="breadcrumb">
-          <Link href="/">Home</Link>
+          <Link href="/">首页</Link>
           <span>/</span>
-          <Link href="/managers">Managers</Link>
+          <Link href="/managers">基金经理</Link>
           <span>/</span>
           <span style={{ color: 'var(--text)' }}>{manager.name}</span>
         </div>
@@ -128,13 +128,13 @@ export default function ManagerDetailClient({ slug }: Props) {
             <span className="stat-value tabular">{formatMoney(dp.nav)}</span>
           </div>
           <div className="stat-item">
-            <span className="stat-label">Cum. Return</span>
+            <span className="stat-label">累计收益</span>
             <span className={`stat-value tabular ${getSignedClass(dp.cumulativeReturn)}`}>
               {formatReturn(dp.cumulativeReturn)}
             </span>
           </div>
           <div className="stat-item">
-            <span className="stat-label">Drawdown</span>
+            <span className="stat-label">回撤</span>
             <span className="stat-value tabular">{formatReturn(dp.drawdown)}</span>
           </div>
           <div className="stat-item">
@@ -142,7 +142,7 @@ export default function ManagerDetailClient({ slug }: Props) {
             <span className="stat-value tabular">{dp.sharpe.toFixed(2)}</span>
           </div>
           <div className="stat-item">
-            <span className="stat-label">Hit Rate</span>
+            <span className="stat-label">命中率</span>
             <span className="stat-value tabular">{formatPercent(dp.hitRate * 100)}</span>
           </div>
         </div>
@@ -155,9 +155,9 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Performance chart */}
           <div className="perf-card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>Performance Curve</h2>
+              <h2 style={{ fontSize: '0.95rem' }}>业绩曲线</h2>
               <span className="muted text-xs">
-                {dp.lookbackDays ? `${dp.lookbackDays.toFixed(0)}d lookback` : 'Backtest'}
+                {dp.lookbackDays ? `${dp.lookbackDays.toFixed(0)}天回溯` : '回测'}
               </span>
             </div>
             <div className="chart-area">
@@ -182,8 +182,8 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Current decisions */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>Current Decisions</h2>
-              <span className="muted text-xs">Top model outputs by conviction</span>
+              <h2 style={{ fontSize: '0.95rem' }}>当前决策</h2>
+              <span className="muted text-xs">按信念排序的模型输出</span>
             </div>
             {manager.latestDecisions.length > 0 ? (
               <div className="decision-grid">
@@ -194,7 +194,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                         {d.direction}
                       </span>
                       <span className="text-xs tabular muted">
-                        {formatPercent(d.targetWeight * 100)} weight
+                        {formatPercent(d.targetWeight * 100)} 权重
                       </span>
                     </div>
                     <Link href={`/opportunities/detail?slug=${d.opportunity.slug}`} style={{ fontWeight: 600, fontSize: '0.88rem' }}>
@@ -202,7 +202,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                     </Link>
                     <div className="flex items-center justify-between mt-2 text-xs">
                       <span className="muted">
-                        Conviction {d.convictionScore.toFixed(3)}
+                        信念 {d.convictionScore.toFixed(3)}
                       </span>
                       {d.opportunity.currentPrice != null && (
                         <span className="tabular">{formatMoney(d.opportunity.currentPrice)}</span>
@@ -212,15 +212,15 @@ export default function ManagerDetailClient({ slug }: Props) {
                 ))}
               </div>
             ) : (
-              <div className="muted text-sm">No active decisions.</div>
+              <div className="muted text-sm">暂无活跃决策。</div>
             )}
           </div>
 
           {/* Memos */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>Research Memos</h2>
-              <span className="muted text-xs">Generated from current live portfolio</span>
+              <h2 style={{ fontSize: '0.95rem' }}>研究备忘录</h2>
+              <span className="muted text-xs">基于当前实时组合生成</span>
             </div>
             {memos.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -239,7 +239,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                           {memo.opportunity.title}
                         </Link>
                       ) : (
-                        <span>No linked opportunity</span>
+                        <span>无关联标的</span>
                       )}
                     </div>
                     {memo.content && (
@@ -252,7 +252,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                 ))}
               </div>
             ) : (
-              <div className="muted text-sm">No memos generated yet.</div>
+              <div className="muted text-sm">尚未生成备忘录。</div>
             )}
           </div>
         </div>
@@ -262,30 +262,30 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Portfolio stats */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>Portfolio Stats</h2>
-              <span className="muted text-xs">{livePortfolio?.positions?.length ?? 0} positions</span>
+              <h2 style={{ fontSize: '0.95rem' }}>投资组合统计</h2>
+              <span className="muted text-xs">{livePortfolio?.positions?.length ?? 0} 持仓</span>
             </div>
             <div className="stat-grid">
               <div className="stat-item">
-                <span className="stat-label">Gross</span>
+                <span className="stat-label">总敞口</span>
                 <span className="stat-value" style={{ fontSize: '1.1rem' }}>
                   {formatPercent((livePortfolio?.grossExposure ?? 0) * 100)}
                 </span>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Cash</span>
+                <span className="stat-label">现金</span>
                 <span className="stat-value" style={{ fontSize: '1.1rem' }}>
                   {formatPercent((livePortfolio?.cashWeight ?? 0) * 100)}
                 </span>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Risk</span>
+                <span className="stat-label">风险</span>
                 <span className="stat-value" style={{ fontSize: '1.1rem' }}>
                   {(livePortfolio?.riskScore ?? 0).toFixed(2)}
                 </span>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Rating</span>
+                <span className="stat-label">评分</span>
                 <span className="stat-value" style={{ fontSize: '1.1rem' }}>
                   {reviewState.averageRating?.toFixed(2) ?? '--'}
                 </span>
@@ -296,7 +296,7 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Positions list */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>Positions</h2>
+              <h2 style={{ fontSize: '0.95rem' }}>持仓</h2>
             </div>
             {livePortfolio?.positions?.length ? (
               <div className="positions-list">
@@ -312,7 +312,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                         {pos.opportunity.title}
                       </Link>
                       <span className="muted text-xs">
-                        Conviction {pos.convictionScore.toFixed(3)}
+                        信念 {pos.convictionScore.toFixed(3)}
                       </span>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -335,15 +335,15 @@ export default function ManagerDetailClient({ slug }: Props) {
                 ))}
               </div>
             ) : (
-              <div className="muted text-sm">No positions.</div>
+              <div className="muted text-sm">暂无持仓。</div>
             )}
           </div>
 
           {/* Signal architecture */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>Signal Architecture</h2>
-              <span className="muted text-xs">Model bias</span>
+              <h2 style={{ fontSize: '0.95rem' }}>信号架构</h2>
+              <span className="muted text-xs">模型偏好</span>
             </div>
             <div className="signal-list">
               {manager.signalMix.map((sig, i) => (
@@ -369,8 +369,8 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Rebalance history */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>Rebalance History</h2>
-              <span className="muted text-xs">Recent changes</span>
+              <h2 style={{ fontSize: '0.95rem' }}>再平衡历史</h2>
+              <span className="muted text-xs">近期变动</span>
             </div>
             {rebalances.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -381,7 +381,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                         {rb.opportunityTitle}
                       </div>
                       <span className="muted text-xs">
-                        {rb.delta > 0 ? 'Added risk' : rb.delta < 0 ? 'Trimmed risk' : 'No change'}
+                        {rb.delta > 0 ? '加仓' : rb.delta < 0 ? '减仓' : '无变动'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs tabular">
@@ -395,15 +395,15 @@ export default function ManagerDetailClient({ slug }: Props) {
                 ))}
               </div>
             ) : (
-              <div className="muted text-sm">Only one snapshot exists so far.</div>
+              <div className="muted text-sm">目前仅有一个快照。</div>
             )}
           </div>
 
           {/* Reviews */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>Reviews</h2>
-              <span className="muted text-xs">{reviewState.total} total</span>
+              <h2 style={{ fontSize: '0.95rem' }}>评价</h2>
+              <span className="muted text-xs">{reviewState.total} 条</span>
             </div>
             {reviewState.reviews.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -414,14 +414,14 @@ export default function ManagerDetailClient({ slug }: Props) {
                       <span className="text-xs muted">{formatDateTime(rv.createdAt)}</span>
                     </div>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="badge badge-accent">Rating {rv.rating}/5</span>
+                      <span className="badge badge-accent">评分 {rv.rating}/5</span>
                     </div>
                     {rv.comment && <p className="muted text-sm">{rv.comment}</p>}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="muted text-sm">No reviews yet.</div>
+              <div className="muted text-sm">暂无评价。</div>
             )}
           </div>
         </div>

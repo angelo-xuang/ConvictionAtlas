@@ -13,7 +13,7 @@ type PositionStackProps = {
 
 export function PositionStack({ positions }: PositionStackProps) {
   if (!positions.length) {
-    return <div className="muted">No active positions.</div>;
+    return <div className="muted">暂无活跃持仓。</div>;
   }
 
   return (

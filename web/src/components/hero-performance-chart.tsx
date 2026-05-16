@@ -38,7 +38,7 @@ export function HeroPerformanceChart() {
   if (!managers.length) {
     return (
       <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-        <span className="muted">No manager data available</span>
+        <span className="muted">暂无经理数据</span>
       </div>
     );
   }
