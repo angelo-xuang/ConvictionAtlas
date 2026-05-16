@@ -142,17 +142,17 @@ export class BacktestService {
       const nextTs = timestamps[i + 1];
 
       const candidates = universe
-        .map((opp) => this.scoreOpportunity(blueprint, opp, currentTs))
+        .map((opp) => ({ opp, scored: this.scoreOpportunity(blueprint, opp, currentTs) }))
         .filter(
-          (c): c is NonNullable<typeof c> =>
-            c !== null && c.score > blueprint.bullishThreshold,
+          (c): c is { opp: BacktestOpportunity; scored: NonNullable<ReturnType<typeof this.scoreOpportunity>> } =>
+            c.scored !== null && c.scored.score > blueprint.bullishThreshold,
         )
-        .sort((a, b) => b.score - a.score)
+        .sort((a, b) => b.scored.score - a.scored.score)
         .slice(0, blueprint.maxPositions);
 
       const investableCapital = candidates.length ? 1 - blueprint.cashFloor : 0;
       const scoreTotal =
-        candidates.reduce((s, c) => s + c.targetWeight, 0) || 1;
+        candidates.reduce((s, c) => s + c.scored.targetWeight, 0) || 1;
       const cashWeight = candidates.length ? blueprint.cashFloor : 1;
 
       let intervalReturn = 0;
@@ -163,24 +163,24 @@ export class BacktestService {
         entryPrice: number;
       }> = [];
 
-      for (const candidate of candidates) {
-        const startPoint = this.getPointAtOrBefore(candidate.historyPoints, currentTs);
-        const endPoint = this.getPointAtOrBefore(candidate.historyPoints, nextTs);
+      for (const { opp, scored } of candidates) {
+        const startPoint = this.getPointAtOrBefore(opp.historyPoints, currentTs);
+        const endPoint = this.getPointAtOrBefore(opp.historyPoints, nextTs);
         if (!startPoint || !endPoint || startPoint.price <= 0) continue;
 
-        const weight = (candidate.targetWeight / scoreTotal) * investableCapital;
+        const weight = (scored.targetWeight / scoreTotal) * investableCapital;
         const assetReturn = this.computeAssetReturn(
           managerSlug,
-          candidate.type,
+          opp.type,
           startPoint.price,
           endPoint.price,
         );
         intervalReturn += weight * assetReturn;
 
         positionData.push({
-          opportunityId: candidate.id,
+          opportunityId: opp.id,
           weight: round(weight, 4),
-          convictionScore: round(candidate.score, 4),
+          convictionScore: round(scored.score, 4),
           entryPrice: round(startPoint.price, 8),
         });
       }
@@ -189,7 +189,6 @@ export class BacktestService {
       dailyReturns.push(intervalReturn);
       navHistory.push(nav);
 
-      // Running metrics
       const cumulativeReturn = round(nav / 100 - 1, 4);
       const peakNav = Math.max(...navHistory);
       const drawdown = round(nav / peakNav - 1, 4);
@@ -202,30 +201,35 @@ export class BacktestService {
       );
 
       // Risk score from risk_flag signal
-      const riskScores = candidates.map((c) => {
-        const sm = this.buildSignalMap(c, currentTs);
+      const riskScores = candidates.map(({ opp }) => {
+        const sm = this.buildSignalMap(opp, currentTs);
         return Math.abs(Number(sm.risk_flag ?? 0));
       });
       const riskScore = riskScores.length ? round(average(riskScores), 4) : 0;
 
-      // Persist snapshot (use current time; ordering preserved by sequential IDs)
+      // Persist snapshot
       const snapshot = await this.prisma.portfolioSnapshot.create({
         data: {
-          managerId,
+          manager: { connect: { id: managerId } },
           cashWeight,
           grossExposure: round(1 - cashWeight, 4),
           riskScore,
           nav,
           positions: {
-            create: positionData,
+            create: positionData.map((p) => ({
+              opportunity: { connect: { id: p.opportunityId } },
+              weight: p.weight,
+              convictionScore: p.convictionScore,
+              entryPrice: p.entryPrice,
+            })),
           },
         },
       });
 
       await this.prisma.performanceSnapshot.create({
         data: {
-          portfolioSnapshotId: snapshot.id,
-          managerId,
+          portfolioSnapshot: { connect: { id: snapshot.id } },
+          manager: { connect: { id: managerId } },
           nav,
           dailyReturn: round(intervalReturn, 6),
           cumulativeReturn,
