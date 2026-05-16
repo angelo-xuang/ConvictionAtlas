@@ -215,7 +215,7 @@ export class BacktestService {
           grossExposure: round(1 - cashWeight, 4),
           riskScore,
           nav,
-        },
+        } as any,
       });
 
       if (positionData.length) {
@@ -240,7 +240,7 @@ export class BacktestService {
           drawdown,
           sharpe,
           hitRate,
-        },
+        } as any,
       });
     }
 
