@@ -1,22 +1,15 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  fetchPageData,
-  formatCompact,
-  formatMoney,
-  formatPercent,
-  formatReturn,
-  getSignedClass,
-} from '../../lib/api';
-import type {
-  ManagerLeaderboardEntry,
-  OpportunityLeaderboardEntry,
-} from '../../lib/types';
+import { fetchPageData, formatMoney, formatReturn, formatCompact } from '../../lib/api';
+import type { ManagerLeaderboardEntry, OpportunityLeaderboardEntry } from '../../lib/types';
+import { MiniLine } from '../../components/Chart';
 
 export default function LeaderboardPage() {
-  const [managerRows, setManagerRows] = useState<ManagerLeaderboardEntry[]>([]);
-  const [opportunityRows, setOpportunityRows] = useState<OpportunityLeaderboardEntry[]>([]);
+  const [managers, setManagers] = useState<ManagerLeaderboardEntry[]>([]);
+  const [opportunities, setOpportunities] = useState<OpportunityLeaderboardEntry[]>([]);
+  const [tab, setTab] = useState<'managers' | 'opportunities'>('managers');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,129 +17,107 @@ export default function LeaderboardPage() {
       fetchPageData<ManagerLeaderboardEntry[]>('/leaderboard/managers'),
       fetchPageData<OpportunityLeaderboardEntry[]>('/leaderboard/opportunities'),
     ])
-      .then(([managers, opportunities]) => {
-        setManagerRows(managers ?? []);
-        setOpportunityRows(opportunities ?? []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      .then(([m, o]) => { setManagers(m); setOpportunities(o); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="loading">Loading...</div>;
+  if (loading) return <div className="shell"><p className="muted" style={{ padding: '60px 0' }}>Loading leaderboard...</p></div>;
 
   return (
-    <div className="page-stack">
-      <section className="hero hero-compact">
+    <div className="shell">
+      <div className="page-header">
         <div>
-          <div className="breadcrumbs">
-            <Link href="/">Home</Link>
-            <span>/</span>
-            <span>Leaderboard</span>
+          <div className="breadcrumb">
+            <Link href="/">Home</Link><span>/</span><span>Leaderboard</span>
           </div>
-          <span className="hero-kicker">Ranking layer</span>
-          <h1 className="detail-headline">One place to compare manager and market ranks.</h1>
-          <p className="detail-copy">
-            This page surfaces the aggregate outputs from the signal engine, manager
-            scoring, walk-forward backtests, portfolio engine, and review layer.
-          </p>
+          <h1>Performance Rankings</h1>
+          <p className="muted text-sm mt-2">Compare managers and opportunities by key metrics.</p>
         </div>
-        <div className="stat-strip">
-          <div className="stat-box">
-            <div className="stat-label">Managers ranked</div>
-            <div className="stat-value">{managerRows?.length ?? 0}</div>
-          </div>
-          <div className="stat-box">
-            <div className="stat-label">Opportunities ranked</div>
-            <div className="stat-value">{opportunityRows?.length ?? 0}</div>
-          </div>
+        <div className="flex gap-3">
+          <div className="stat-item"><span className="stat-value">{managers.length}</span><span className="stat-label">Managers</span></div>
+          <div className="stat-item"><span className="stat-value">{opportunities.length}</span><span className="stat-label">Opportunities</span></div>
         </div>
-      </section>
+      </div>
 
-      <section className="section">
-        <div className="section-header">
-          <h2 className="section-title">Manager leaderboard</h2>
-          <Link href="/managers" className="muted">
-            Open manager pages
-          </Link>
-        </div>
-        {managerRows?.length ? (
-          <div className="table-card">
-            <div
-              className="data-table-row data-table-head"
-              style={{ gridTemplateColumns: '1.3fr .8fr .8fr .8fr .8fr .8fr' }}
-            >
-              <span>Manager</span>
-              <span>NAV</span>
-              <span>Cumulative</span>
-              <span>Sharpe</span>
-              <span>Hit rate</span>
-              <span>Rating</span>
-            </div>
-            {managerRows.map((entry) => (
-              <Link
-                key={entry.slug}
-                href={`/managers/${entry.slug}`}
-                className="data-table-row"
-                style={{ gridTemplateColumns: '1.3fr .8fr .8fr .8fr .8fr .8fr' }}
-              >
-                <strong>{entry.name}</strong>
-                <span>{formatMoney(entry.nav)}</span>
-                <span className={getSignedClass(entry.cumulativeReturn)}>
-                  {formatReturn(entry.cumulativeReturn)}
-                </span>
-                <span>{entry.sharpe.toFixed(2)}</span>
-                <span>{formatPercent(entry.hitRate * 100)}</span>
-                <span>{entry.averageRating?.toFixed(2) ?? '--'}</span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="error-card">Manager leaderboard data is not available yet.</div>
-        )}
-      </section>
+      <div className="leaderboard-tabs">
+        <button className={`leaderboard-tab ${tab === 'managers' ? 'active' : ''}`} onClick={() => setTab('managers')}>Managers</button>
+        <button className={`leaderboard-tab ${tab === 'opportunities' ? 'active' : ''}`} onClick={() => setTab('opportunities')}>Opportunities</button>
+      </div>
 
-      <section className="section">
-        <div className="section-header">
-          <h2 className="section-title">Opportunity leaderboard</h2>
-          <Link href="/opportunities" className="muted">
-            Open opportunity pages
-          </Link>
+      {tab === 'managers' && (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Manager</th>
+                <th>Curve</th>
+                <th>NAV</th>
+                <th>Cumulative</th>
+                <th>Sharpe</th>
+                <th>Hit Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {managers.sort((a, b) => b.cumulativeReturn - a.cumulativeReturn).map((m, i) => {
+                const navPoints = m.performanceSeries?.map(p => p.nav) || [];
+                return (
+                  <tr key={m.slug}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs muted font-mono">#{i + 1}</span>
+                        <Link href={`/managers/${m.slug}`} style={{ fontWeight: 600 }}>{m.name}</Link>
+                      </div>
+                    </td>
+                    <td style={{ width: 120 }}>
+                      {navPoints.length > 1 && <MiniLine points={navPoints} height={32} tone={m.cumulativeReturn >= 0 ? 'positive' : 'negative'} />}
+                    </td>
+                    <td className="tabular">{formatMoney(m.nav)}</td>
+                    <td className={`tabular ${m.cumulativeReturn >= 0 ? 'positive' : 'negative'}`}>{formatReturn(m.cumulativeReturn)}</td>
+                    <td className="tabular">{m.sharpe.toFixed(2)}</td>
+                    <td className="tabular">{(m.hitRate * 100).toFixed(0)}%</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-        {opportunityRows?.length ? (
-          <div className="table-card">
-            <div
-              className="data-table-row data-table-head"
-              style={{ gridTemplateColumns: '1.5fr .7fr .7fr .8fr .8fr .8fr' }}
-            >
-              <span>Opportunity</span>
-              <span>Price</span>
-              <span>24h</span>
-              <span>Volume</span>
-              <span>Conviction</span>
-              <span>Signal</span>
-            </div>
-            {opportunityRows.map((entry) => (
-              <Link
-                key={entry.id}
-                href={`/opportunities/detail?slug=${entry.slug}`}
-                className="data-table-row"
-                style={{ gridTemplateColumns: '1.5fr .7fr .7fr .8fr .8fr .8fr' }}
-              >
-                <strong>{entry.title}</strong>
-                <span>{formatMoney(entry.currentPrice)}</span>
-                <span className={getSignedClass(entry.priceChange24h)}>
-                  {formatPercent(entry.priceChange24h)}
-                </span>
-                <span>{formatCompact(entry.volume24h)}</span>
-                <span>{entry.convictionAverage.toFixed(4)}</span>
-                <span>{entry.signalStrength.toFixed(4)}</span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="error-card">Opportunity leaderboard data is not available yet.</div>
-        )}
-      </section>
+      )}
+
+      {tab === 'opportunities' && (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Opportunity</th>
+                <th>Price</th>
+                <th>24h</th>
+                <th>Volume</th>
+                <th>Conviction</th>
+                <th>Signal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {opportunities.sort((a, b) => b.signalStrength - a.signalStrength).map((o, i) => (
+                <tr key={o.id}>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs muted font-mono">#{i + 1}</span>
+                      <Link href={`/opportunities/detail?id=${o.id}`} style={{ fontWeight: 600 }}>{o.title}</Link>
+                      <span className="badge badge-neutral">{o.type === 'TOKEN' ? 'Token' : 'PM'}</span>
+                    </div>
+                  </td>
+                  <td className="tabular">{formatMoney(o.currentPrice)}</td>
+                  <td className={`tabular ${o.priceChange24h !== null ? (o.priceChange24h >= 0 ? 'positive' : 'negative') : ''}`}>{formatReturn(o.priceChange24h)}</td>
+                  <td className="tabular">{formatCompact(o.volume24h)}</td>
+                  <td className="tabular">{o.convictionAverage.toFixed(1)}</td>
+                  <td className="tabular">{o.signalStrength.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

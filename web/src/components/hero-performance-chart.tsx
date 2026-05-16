@@ -1,18 +1,11 @@
 'use client';
+
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Sparkline } from './sparkline';
-import { fetchPageData, formatMoney, formatReturn, getSignedClass } from '../lib/api';
+import { MiniLine } from './Chart';
+import { fetchPageData, formatReturn, getSignedClass } from '../lib/api';
 import type { ManagerSummary } from '../lib/types';
 
-function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(value));
-}
-
-export default function HeroPerformanceChart() {
+export function HeroPerformanceChart() {
   const [managers, setManagers] = useState<ManagerSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,60 +20,64 @@ export default function HeroPerformanceChart() {
 
   if (loading) {
     return (
-      <div className="hero-chart-placeholder">
-        <div className="hero-chart-loading">Loading performance data…</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="card"
+            style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 16 }}
+          >
+            <div style={{ height: 14, background: 'var(--surface-strong)', borderRadius: 4, width: '60%' }} />
+            <div style={{ height: 48, background: 'var(--bg-subtle)', borderRadius: 6 }} />
+          </div>
+        ))}
       </div>
     );
   }
 
   if (!managers.length) {
     return (
-      <div className="hero-chart-placeholder">
-        <div className="hero-chart-loading">No manager data available</div>
+      <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+        <span className="muted">No manager data available</span>
       </div>
     );
   }
 
-  // Sort by cumulative return, best first
   const sorted = [...managers].sort(
     (a, b) => (b.cumulativeReturn ?? 0) - (a.cumulativeReturn ?? 0),
   );
 
   return (
-    <div className="hero-chart-grid">
-      {sorted.map((manager) => (
-        <Link
-          key={manager.slug}
-          href={`/managers/${manager.slug}`}
-          className="hero-chart-card"
-        >
-          <div className="hero-chart-header">
-            <div className="hero-chart-name">{manager.name}</div>
-            <span className={`hero-chart-return ${getSignedClass(manager.cumulativeReturn)}`}>
-              {formatReturn(manager.cumulativeReturn)}
-            </span>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      {sorted.map((m) => {
+        const ret = m.cumulativeReturn ?? 0;
+        const tone = ret > 0 ? 'positive' : ret < 0 ? 'negative' : 'neutral';
+
+        return (
+          <div key={m.slug} className="card" style={{ padding: 16 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+            >
+              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                {m.name}
+              </span>
+              <span className={`badge ${getSignedClass(ret)}`}>
+                {formatReturn(ret)}
+              </span>
+            </div>
+            <MiniLine
+              points={m.performanceSeries.map((p) => p.nav)}
+              height={48}
+              tone={tone}
+            />
           </div>
-          <Sparkline
-            className="hero-chart-sparkline"
-            points={manager.performanceSeries.map((p) => p.nav)}
-            height={64}
-            area
-            tone={
-              (manager.cumulativeReturn ?? 0) > 0
-                ? 'positive'
-                : (manager.cumulativeReturn ?? 0) < 0
-                  ? 'negative'
-                  : 'neutral'
-            }
-            dateLabels={manager.performanceSeries.map((p) => formatShortDate(p.pointAt))}
-            formatValue={(v) => formatMoney(v)}
-          />
-          <div className="hero-chart-footer">
-            <span className="hero-chart-nav">{formatMoney(manager.latestNav)}</span>
-            <span className="hero-chart-style">{manager.style}</span>
-          </div>
-        </Link>
-      ))}
+        );
+      })}
     </div>
   );
 }

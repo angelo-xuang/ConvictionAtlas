@@ -60,6 +60,8 @@
     "@prisma/client": "^6.19.2",
     "axios": "^1.13.6",
     "better-sqlite3": "^9.6.0",
+    "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.6",
     "next": "^15.5.6",
     "openai": "^6.32.0",
     "react": "^19.0.0",

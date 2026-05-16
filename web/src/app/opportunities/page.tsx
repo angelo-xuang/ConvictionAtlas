@@ -1,24 +1,13 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AssetAvatar } from '../../components/asset-avatar';
-import {
-  fetchPageData,
-  formatCompact,
-  formatDate,
-  formatMoney,
-  formatPercent,
-  formatSignalName,
-  getSignedClass,
-} from '../../lib/api';
-import type {
-  OpportunityLeaderboardEntry,
-  OpportunitySummary,
-} from '../../lib/types';
+import { fetchPageData, formatMoney, formatPercent, formatCompact, getSignedClass, formatSignalName } from '../../lib/api';
+import type { OpportunitySummary, OpportunityLeaderboardEntry } from '../../lib/types';
 
 export default function OpportunitiesPage() {
-  const [opportunities, setOpportunities] = useState<OpportunitySummary[]>([]);
-  const [leaderboard, setLeaderboard] = useState<OpportunityLeaderboardEntry[]>([]);
+  const [opps, setOpps] = useState<OpportunitySummary[]>([]);
+  const [leaders, setLeaders] = useState<OpportunityLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,160 +15,122 @@ export default function OpportunitiesPage() {
       fetchPageData<OpportunitySummary[]>('/opportunities'),
       fetchPageData<OpportunityLeaderboardEntry[]>('/leaderboard/opportunities'),
     ])
-      .then(([opportunitiesData, leaderboardData]) => {
-        setOpportunities(opportunitiesData ?? []);
-        setLeaderboard(leaderboardData ?? []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      .then(([o, l]) => { setOpps(o); setLeaders(l); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="loading">Loading...</div>;
-
-  const rows = opportunities ?? [];
-  const tokenCount = rows.filter((row) => row.type === 'TOKEN').length;
-  const marketCount = rows.filter((row) => row.type === 'PREDICTION_MARKET').length;
+  if (loading) return <div className="shell"><p className="muted" style={{ padding: '60px 0' }}>Loading opportunities...</p></div>;
 
   return (
-    <div className="page-stack">
-      <section className="hero hero-compact">
+    <div className="shell">
+      <div className="page-header">
         <div>
-          <div className="breadcrumbs">
+          <div className="breadcrumb">
             <Link href="/">Home</Link>
             <span>/</span>
             <span>Opportunities</span>
           </div>
-          <span className="hero-kicker">Opportunity tape</span>
-          <h1 className="detail-headline">
-            Tokens and prediction markets flowing through one signal engine.
-          </h1>
-          <p className="detail-copy">
-            This is the normalized inventory produced from CoinGecko and Polymarket
-            ingestion, with signal overlays, manager interpretations, and source links.
-          </p>
+          <h1>Market Opportunities</h1>
+          <p className="muted text-sm mt-2">All tracked tokens and prediction markets with signal scores and price action.</p>
         </div>
-        <div className="stat-strip">
-          <div className="stat-box">
-            <div className="stat-label">Total</div>
-            <div className="stat-value">{rows.length}</div>
+        <div className="flex gap-3">
+          <div className="stat-item">
+            <span className="stat-value">{opps.length}</span>
+            <span className="stat-label">Total</span>
           </div>
-          <div className="stat-box">
-            <div className="stat-label">Tokens</div>
-            <div className="stat-value">{tokenCount}</div>
+          <div className="stat-item">
+            <span className="stat-value">{opps.filter(o => o.type === 'TOKEN').length}</span>
+            <span className="stat-label">Tokens</span>
           </div>
-          <div className="stat-box">
-            <div className="stat-label">Prediction markets</div>
-            <div className="stat-value">{marketCount}</div>
+          <div className="stat-item">
+            <span className="stat-value">{opps.filter(o => o.type === 'PREDICTION_MARKET').length}</span>
+            <span className="stat-label">Markets</span>
           </div>
         </div>
-      </section>
+      </div>
 
-      {!rows.length ? (
-        <div className="error-card">
-          Opportunity data is not available yet. Run the backend and pipeline first.
-        </div>
-      ) : (
-        <section className="section">
-          <div className="section-header">
-            <h2 className="section-title">Live inventory</h2>
-            <span className="muted">Real sources only, no mock opportunity rows</span>
-          </div>
-          <div className="card-grid">
-            {rows.map((opportunity) => (
-              <Link
-                key={opportunity.id}
-                href={`/opportunities/detail?slug=${opportunity.slug}`}
-                className="panel"
-              >
-                <div className="action-card-row">
-                  <AssetAvatar
-                    title={opportunity.title}
-                    imageUrl={opportunity.imageUrl}
-                    symbol={opportunity.symbol}
-                    sourceKind={opportunity.sourceKind}
-                    size="lg"
-                  />
-                  <div>
-                    <div className="tag-row">
-                      <span className="pill">{opportunity.sourceKind}</span>
-                      <span className="chip">{opportunity.type}</span>
-                    </div>
-                    <h3>{opportunity.title}</h3>
+      <div className="opp-grid">
+        {opps.map((opp) => {
+          const signal = opp.strongestSignal;
+          return (
+            <Link href={`/opportunities/detail?id=${opp.id}`} key={opp.id} className="opp-card">
+              <div className="opp-card-header">
+                <div
+                  className="avatar avatar-md"
+                  style={opp.imageUrl ? { backgroundImage: `url(${opp.imageUrl})`, backgroundSize: 'cover' } : undefined}
+                >
+                  {!opp.imageUrl && (opp.symbol?.[0] || opp.title[0])}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 className="truncate">{opp.title}</h3>
+                  <div className="flex gap-2">
+                    <span className="badge badge-neutral">{opp.type === 'TOKEN' ? 'Token' : 'Prediction'}</span>
+                    <span className="badge badge-neutral">{opp.sourceKind}</span>
                   </div>
                 </div>
-                <p className="muted">{opportunity.summary}</p>
-                <div className="list">
-                  <div className="list-row">
-                    <span>Price</span>
-                    <strong>{formatMoney(opportunity.currentPrice)}</strong>
-                  </div>
-                  <div className="list-row">
-                    <span>24h move</span>
-                    <strong className={getSignedClass(opportunity.priceChange24h)}>
-                      {formatPercent(opportunity.priceChange24h)}
-                    </strong>
-                  </div>
-                  <div className="list-row">
-                    <span>Volume</span>
-                    <strong>{formatCompact(opportunity.volume24h)}</strong>
-                  </div>
-                  <div className="list-row">
-                    <span>Strongest signal</span>
-                    <strong>
-                      {opportunity.strongestSignal
-                        ? formatSignalName(opportunity.strongestSignal.name)
-                        : '--'}
-                    </strong>
-                  </div>
-                  <div className="list-row">
-                    <span>Event</span>
-                    <strong>{formatDate(opportunity.eventDate)}</strong>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+              </div>
 
-      {leaderboard?.length ? (
-        <section className="section">
-          <div className="section-header">
-            <h2 className="section-title">Conviction leaderboard</h2>
-            <Link href="/leaderboard" className="muted">
-              Compare all ranks
+              <div className="opp-card-data">
+                <div className="opp-data-item">
+                  <span className="label">Price</span>
+                  <span className="value">{formatMoney(opp.currentPrice)}</span>
+                </div>
+                <div className="opp-data-item">
+                  <span className="label">24h</span>
+                  <span className={`value ${opp.priceChange24h !== null ? (opp.priceChange24h >= 0 ? 'positive' : 'negative') : ''}`}>
+                    {formatPercent(opp.priceChange24h)}
+                  </span>
+                </div>
+                <div className="opp-data-item">
+                  <span className="label">Volume</span>
+                  <span className="value">{formatCompact(opp.volume24h)}</span>
+                </div>
+                <div className="opp-data-item">
+                  <span className="label">Strongest</span>
+                  <span className="value text-sm">{signal ? formatSignalName(signal.name) : '--'}</span>
+                </div>
+              </div>
             </Link>
+          );
+        })}
+      </div>
+
+      {leaders.length > 0 && (
+        <div className="section">
+          <div className="section-header">
+            <h2>Leaderboard</h2>
           </div>
-          <div className="table-card">
-            <div
-              className="data-table-row data-table-head"
-              style={{ gridTemplateColumns: '1.4fr .8fr .8fr .8fr .8fr' }}
-            >
-              <span>Opportunity</span>
-              <span>Price</span>
-              <span>24h move</span>
-              <span>Conviction</span>
-              <span>Signal</span>
-            </div>
-            {leaderboard.slice(0, 10).map((entry) => (
-              <Link
-                key={entry.id}
-                href={`/opportunities/detail?slug=${entry.slug}`}
-                className="data-table-row"
-                style={{ gridTemplateColumns: '1.4fr .8fr .8fr .8fr .8fr' }}
-              >
-                <strong>{entry.title}</strong>
-                <span>{formatMoney(entry.currentPrice)}</span>
-                <span className={getSignedClass(entry.priceChange24h)}>
-                  {formatPercent(entry.priceChange24h)}
-                </span>
-                <span>{entry.convictionAverage.toFixed(4)}</span>
-                <span>{entry.signalStrength.toFixed(4)}</span>
-              </Link>
-            ))}
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Opportunity</th>
+                  <th>Price</th>
+                  <th>24h</th>
+                  <th>Volume</th>
+                  <th>Conviction</th>
+                  <th>Signal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaders.map((l) => (
+                  <tr key={l.id}>
+                    <td><strong>{l.title}</strong> <span className="badge badge-neutral text-xs">{l.type === 'TOKEN' ? 'Token' : 'PM'}</span></td>
+                    <td className="tabular">{formatMoney(l.currentPrice)}</td>
+                    <td className={`tabular ${l.priceChange24h !== null ? (l.priceChange24h >= 0 ? 'positive' : 'negative') : ''}`}>
+                      {formatPercent(l.priceChange24h)}
+                    </td>
+                    <td className="tabular">{formatCompact(l.volume24h)}</td>
+                    <td className="tabular">{l.convictionAverage.toFixed(1)}</td>
+                    <td className="tabular">{l.signalStrength.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </section>
-      ) : null}
+        </div>
+      )}
     </div>
   );
 }

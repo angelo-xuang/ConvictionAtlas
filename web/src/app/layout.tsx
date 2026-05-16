@@ -5,7 +5,7 @@ import './global.css';
 
 export const metadata = {
   title: 'Conviction Atlas',
-  description: 'Web3 AI fund managers for tokens and prediction markets.',
+  description: 'AI-powered investment intelligence for crypto markets.',
 };
 
 const navItems = [
@@ -21,16 +21,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="reference-theme">
-        <div className="site-shell">
+      <body>
+        <div className="shell">
           <header className="topbar">
             <Link href="/" className="brand">
-              <span>
-                <strong>
-                  <SiteWordmark className="site-wordmark" />
-                </strong>
-                <small>Autonomous token and prediction desks</small>
-              </span>
+              <SiteWordmark />
             </Link>
             <nav className="nav-links">
               {navItems.map((item) => (
@@ -48,6 +43,7 @@ export default function RootLayout({
               </a>
             </nav>
           </header>
+
           <nav className="site-mobile-nav" aria-label="Primary mobile">
             <div className="site-mobile-scroller">
               {navItems.map((item) => (
@@ -65,6 +61,7 @@ export default function RootLayout({
               </a>
             </div>
           </nav>
+
           <main>{children}</main>
         </div>
       </body>

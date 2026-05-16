@@ -1,304 +1,167 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { AssetAvatar } from '../../../components/asset-avatar';
-import {
-  fetchPageData,
-  formatCompact,
-  formatDate,
-  formatDateTime,
-  formatMoney,
-  formatPercent,
-  formatSignalName,
-  getDirectionClass,
-  getSignedClass,
-} from '../../../lib/api';
-import type {
-  ManagerDecision,
-  NewsItem,
-  OpportunityDetail,
-  OpportunityHistoryPoint,
-  Signal,
-} from '../../../lib/types';
+import { useSearchParams } from 'next/navigation';
+import { fetchPageData, formatMoney, formatPercent, formatCompact, formatDate, formatSignalName, getDirectionClass } from '../../../lib/api';
+import type { OpportunityDetail, ManagerDecision, Signal, NewsItem, OpportunityHistoryPoint } from '../../../lib/types';
+import { PerfLine } from '../../../components/Chart';
 
 export default function OpportunityDetailClient() {
   const searchParams = useSearchParams();
-  const slug = searchParams.get('slug') ?? '';
+  const id = searchParams.get('id');
 
-  const [opportunity, setOpportunity] = useState<OpportunityDetail | null>(null);
-  const [managers, setManagers] = useState<ManagerDecision[]>([]);
+  const [detail, setDetail] = useState<OpportunityDetail | null>(null);
+  const [decisions, setDecisions] = useState<ManagerDecision[]>([]);
   const [signals, setSignals] = useState<Signal[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [history, setHistory] = useState<OpportunityHistoryPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!slug) {
-      setLoading(false);
-      return;
-    }
-
+    if (!id) return;
     Promise.all([
-      fetchPageData<OpportunityDetail>(`/opportunities/${slug}`),
-      fetchPageData<ManagerDecision[]>(`/opportunities/${slug}/managers`),
-      fetchPageData<Signal[]>(`/opportunities/${slug}/signals`),
-      fetchPageData<NewsItem[]>(`/opportunities/${slug}/news`),
-      fetchPageData<OpportunityHistoryPoint[]>(`/opportunities/${slug}/history`),
+      fetchPageData<OpportunityDetail>(`/opportunities/${id}`),
+      fetchPageData<ManagerDecision[]>(`/opportunities/${id}/managers`),
+      fetchPageData<Signal[]>(`/opportunities/${id}/signals`),
+      fetchPageData<NewsItem[]>(`/opportunities/${id}/news`),
+      fetchPageData<OpportunityHistoryPoint[]>(`/opportunities/${id}/history`),
     ])
-      .then(([opportunityData, managersData, signalsData, newsData, historyData]) => {
-        setOpportunity(opportunityData ?? null);
-        setManagers(managersData ?? []);
-        setSignals(signalsData ?? []);
-        setNews(newsData ?? []);
-        setHistory(historyData ?? []);
-        setLoading(false);
+      .then(([d, m, s, n, h]) => {
+        setDetail(d);
+        setDecisions(m);
+        setSignals(s);
+        setNews(n);
+        setHistory(h);
       })
-      .catch(() => setLoading(false));
-  }, [slug]);
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [id]);
 
-  if (loading) return <div className="loading">Loading...</div>;
+  if (loading) return <div className="shell"><p className="muted" style={{ padding: '60px 0' }}>Loading...</p></div>;
+  if (!detail) return <div className="shell"><div className="error-card">Opportunity not found.</div></div>;
 
-  if (!slug || !opportunity) {
-    return (
-      <section className="section">
-        <div className="error-card">
-          Opportunity detail is not available. Open this page from an opportunity card
-          after the latest Pages snapshot has been published.
-        </div>
-      </section>
-    );
-  }
-
-  const signalRows = [...(signals ?? opportunity.signals ?? [])].sort(
-    (left, right) => Math.abs(right.value) - Math.abs(left.value),
-  );
-  const managerRows = managers ?? [];
-  const newsRows = news ?? opportunity.newsItems ?? [];
-  const historyRows = history ?? opportunity.historyPoints ?? [];
-  const latestHistory = historyRows.slice(-12).reverse();
-  const metadataEntries = Object.entries(opportunity.metadata ?? {});
+  const priceHistoryPoints = history.map(h => h.price).reverse();
+  const historyDates = history.map(h => formatDate(h.pointAt)).reverse();
 
   return (
-    <div className="page-stack">
-      <section className="hero">
+    <div className="shell">
+      <div className="page-header">
         <div>
-          <div className="breadcrumbs">
-            <Link href="/">Home</Link>
-            <span>/</span>
-            <Link href="/opportunities">Opportunities</Link>
-            <span>/</span>
-            <span>{opportunity.title}</span>
+          <div className="breadcrumb">
+            <Link href="/">Home</Link><span>/</span>
+            <Link href="/opportunities">Opportunities</Link><span>/</span>
+            <span>{detail.title}</span>
           </div>
-          <div className="tag-row">
-            <span className="pill">{opportunity.sourceKind}</span>
-            <span className="chip">{opportunity.type}</span>
-            <span className="chip">{opportunity.status ?? 'unknown'}</span>
-          </div>
-          <div className="manager-detail-heading">
-            <AssetAvatar
-              title={opportunity.title}
-              imageUrl={opportunity.imageUrl}
-              symbol={opportunity.symbol}
-              sourceKind={opportunity.sourceKind}
-              size="lg"
-            />
+          <div className="flex items-center gap-3 mt-2">
+            <div className="avatar avatar-lg">
+              {detail.imageUrl
+                ? <img src={detail.imageUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                : (detail.symbol?.[0] || detail.title[0])}
+            </div>
             <div>
-              <h1 className="detail-headline">{opportunity.title}</h1>
+              <h1>{detail.title}</h1>
+              <div className="flex gap-2 mt-2">
+                <span className="badge badge-neutral">{detail.type === 'TOKEN' ? 'Token' : 'Prediction Market'}</span>
+                <span className="badge badge-neutral">{detail.sourceKind}</span>
+              </div>
             </div>
-          </div>
-          <p className="detail-copy">{opportunity.summary ?? opportunity.description}</p>
-          <div className="tag-row">
-            {opportunity.symbol ? <span className="chip">{opportunity.symbol}</span> : null}
-            {opportunity.category ? <span className="chip">{opportunity.category}</span> : null}
-            <span className="chip">Updated {formatDateTime(opportunity.lastUpdatedAt)}</span>
           </div>
         </div>
-        <div className="panel-stack">
-          {opportunity.imageUrl ? (
-            <div className="image-frame hero-media">
-              <img src={opportunity.imageUrl} alt={opportunity.title} />
-            </div>
-          ) : null}
-          <div className="panel">
-            <div className="list">
-              <div className="list-row">
-                <span>Current price</span>
-                <strong>{formatMoney(opportunity.currentPrice)}</strong>
-              </div>
-              <div className="list-row">
-                <span>24h move</span>
-                <strong className={getSignedClass(opportunity.priceChange24h)}>
-                  {formatPercent(opportunity.priceChange24h)}
-                </strong>
-              </div>
-              <div className="list-row">
-                <span>Volume</span>
-                <strong>{formatCompact(opportunity.volume24h)}</strong>
-              </div>
-              <div className="list-row">
-                <span>Liquidity</span>
-                <strong>{formatCompact(opportunity.liquidity)}</strong>
-              </div>
-              <div className="list-row">
-                <span>Event date</span>
-                <strong>{formatDate(opportunity.eventDate)}</strong>
-              </div>
-            </div>
-            {opportunity.sourceUrl ? (
-              <a
-                href={opportunity.sourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="button-link source-link"
-              >
-                Open source page
-              </a>
-            ) : null}
-          </div>
-        </div>
-      </section>
 
-      <section className="section-grid">
-        <div className="panel">
-          <div className="section-header">
-            <h2 className="section-title">Signal stack</h2>
-            <span className="muted">Sorted by absolute impact</span>
+        <div className="card" style={{ minWidth: 200 }}>
+          <div className="stat-grid">
+            <div className="stat-item"><span className="stat-value">{formatMoney(detail.currentPrice)}</span><span className="stat-label">Price</span></div>
+            <div className="stat-item"><span className={`stat-value ${detail.priceChange24h !== null ? (detail.priceChange24h >= 0 ? 'positive' : 'negative') : ''}`}>{formatPercent(detail.priceChange24h)}</span><span className="stat-label">24h</span></div>
+            <div className="stat-item"><span className="stat-value">{formatCompact(detail.volume24h)}</span><span className="stat-label">Volume</span></div>
           </div>
-          {signalRows.length ? (
-            <div className="signal-grid">
-              {signalRows.map((signal) => (
-                <div key={signal.id} className="signal-card">
-                  <div className="mini-metrics">
-                    <span className="signal-name">{formatSignalName(signal.name)}</span>
-                    <strong className={getDirectionClass(signal.direction)}>
-                      {signal.direction.toLowerCase()}
-                    </strong>
+        </div>
+      </div>
+
+      {priceHistoryPoints.length > 0 && (
+        <div className="card mb-4">
+          <div className="eyebrow mb-2">Price History</div>
+          <PerfLine points={priceHistoryPoints} dateLabels={historyDates} height={200} tone={detail.priceChange24h !== null && detail.priceChange24h < 0 ? 'negative' : 'positive'} />
+        </div>
+      )}
+
+      <div className="detail-layout">
+        <div className="detail-main">
+          {signals.length > 0 && (
+            <div className="card">
+              <div className="eyebrow mb-4">Signals ({signals.length})</div>
+              <div className="decision-grid">
+                {signals.sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).map(s => (
+                  <div key={s.id} className="decision-card">
+                    <div className="flex justify-between items-center mb-2">
+                      <strong className="text-sm">{formatSignalName(s.name)}</strong>
+                      <span className={`badge ${s.value >= 0 ? 'badge-positive' : 'badge-negative'}`}>{s.value.toFixed(2)}</span>
+                    </div>
+                    <div className="flex gap-2 text-xs muted">
+                      <span>Confidence: {(s.confidence * 100).toFixed(0)}%</span>
+                      <span className={`badge ${getDirectionClass(s.direction)}`}>{s.direction}</span>
+                    </div>
                   </div>
-                  <div className="signal-value">{signal.value.toFixed(4)}</div>
-                  <div className="muted">Confidence {signal.confidence.toFixed(2)}</div>
-                  <p className="muted">{signal.rationale}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="muted">Signals have not been computed for this row yet.</div>
+          )}
+
+          {decisions.length > 0 && (
+            <div className="card">
+              <div className="eyebrow mb-4">Manager Views</div>
+              <div className="decision-grid">
+                {decisions.map(d => (
+                  <div key={d.id} className="decision-card">
+                    <div className="flex justify-between items-center">
+                      <strong className="text-sm">{d.manager.name}</strong>
+                      <span className={`badge ${getDirectionClass(d.direction)}`}>{d.direction}</span>
+                    </div>
+                    <div className="text-xs muted mt-2">Conviction: {d.convictionScore.toFixed(2)} | Target: {(d.targetWeight * 100).toFixed(1)}%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {news.length > 0 && (
+            <div className="card">
+              <div className="eyebrow mb-4">News</div>
+              <div className="flex flex-col gap-3">
+                {news.map(n => (
+                  <a key={n.id} href={n.url} target="_blank" rel="noreferrer" className="decision-card" style={{ display: 'block' }}>
+                    <strong className="text-sm">{n.title}</strong>
+                    {n.summary && <p className="text-xs muted mt-2">{n.summary}</p>}
+                    <div className="text-xs muted mt-2">{n.sourceName} · {formatDate(n.publishedAt)}</div>
+                  </a>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
-        <div className="panel">
-          <div className="section-header">
-            <h2 className="section-title">Manager views</h2>
-            <span className="muted">{managerRows.length} model(s)</span>
-          </div>
-          {managerRows.length ? (
-            <div className="list">
-              {managerRows.map((decision) => (
-                <div key={decision.id} className="signal-item">
-                  <div className="mini-metrics">
-                    <Link href={`/managers/${decision.manager.slug}`}>
-                      {decision.manager.name}
-                    </Link>
-                    <strong className={getDirectionClass(decision.direction)}>
-                      {decision.direction.toLowerCase()}
-                    </strong>
-                  </div>
-                  <div className="mini-metrics">
-                    <span>Conviction {decision.convictionScore.toFixed(4)}</span>
-                    <span>Target weight {formatPercent(decision.targetWeight * 100)}</span>
-                  </div>
-                  <div className="muted">{decision.rationale}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="muted">No manager decisions are stored for this opportunity yet.</div>
-          )}
-        </div>
-      </section>
-
-      <section className="section-grid">
-        <div className="panel">
-          <div className="section-header">
-            <h2 className="section-title">Recent history</h2>
-            <span className="muted">{historyRows.length} point(s)</span>
-          </div>
-          {latestHistory.length ? (
-            <div className="table-card table-card-inline">
-              <div
-                className="data-table-row data-table-head"
-                style={{ gridTemplateColumns: '1.1fr .9fr .9fr' }}
-              >
-                <span>Timestamp</span>
-                <span>Price</span>
-                <span>Volume</span>
+        <div className="detail-sidebar">
+          {history.length > 0 && (
+            <div className="card">
+              <div className="eyebrow mb-4">Recent History</div>
+              <div className="table-wrap" style={{ border: 'none' }}>
+                <table>
+                  <thead><tr><th>Date</th><th>Price</th><th>Vol</th></tr></thead>
+                  <tbody>
+                    {history.slice(0, 10).map(h => (
+                      <tr key={h.id}>
+                        <td className="text-xs">{formatDate(h.pointAt)}</td>
+                        <td className="tabular text-sm">{formatMoney(h.price)}</td>
+                        <td className="tabular text-sm">{formatCompact(h.volume)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              {latestHistory.map((point) => (
-                <div
-                  key={point.id}
-                  className="data-table-row"
-                  style={{ gridTemplateColumns: '1.1fr .9fr .9fr' }}
-                >
-                  <span>{formatDateTime(point.pointAt)}</span>
-                  <span>{formatMoney(point.price)}</span>
-                  <span>{formatCompact(point.volume)}</span>
-                </div>
-              ))}
             </div>
-          ) : (
-            <div className="muted">No history points stored yet.</div>
           )}
         </div>
-
-        <div className="panel">
-          <div className="section-header">
-            <h2 className="section-title">Mapped news</h2>
-            <span className="muted">{newsRows.length} article(s)</span>
-          </div>
-          {newsRows.length ? (
-            <div className="list">
-              {newsRows.map((item) => (
-                <a
-                  key={item.id}
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="signal-item"
-                >
-                  <div className="mini-metrics">
-                    <strong>{item.title}</strong>
-                    <span>{item.provider}</span>
-                  </div>
-                  <div className="muted">
-                    {item.sourceName ?? 'Unknown source'} • {formatDateTime(item.publishedAt)}
-                  </div>
-                  {item.summary ? <p className="muted">{item.summary}</p> : null}
-                </a>
-              ))}
-            </div>
-          ) : (
-            <div className="muted">No linked news yet.</div>
-          )}
-        </div>
-      </section>
-
-      {metadataEntries.length ? (
-        <section className="section">
-          <div className="section-header">
-            <h2 className="section-title">Metadata</h2>
-            <span className="muted">Source-specific fields</span>
-          </div>
-          <div className="table-card">
-            {metadataEntries.map(([key, value]) => (
-              <div key={key} className="data-table-row" style={{ gridTemplateColumns: '1fr 2fr' }}>
-                <span>{key}</span>
-                <strong>{typeof value === 'string' ? value : JSON.stringify(value)}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      </div>
     </div>
   );
 }
