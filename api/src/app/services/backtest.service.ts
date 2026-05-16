@@ -210,26 +210,30 @@ export class BacktestService {
       // Persist snapshot
       const snapshot = await this.prisma.portfolioSnapshot.create({
         data: {
-          manager: { connect: { id: managerId } },
+          managerId,
           cashWeight,
           grossExposure: round(1 - cashWeight, 4),
           riskScore,
           nav,
-          positions: {
-            create: positionData.map((p) => ({
-              opportunity: { connect: { id: p.opportunityId } },
-              weight: p.weight,
-              convictionScore: p.convictionScore,
-              entryPrice: p.entryPrice,
-            })),
-          },
         },
       });
 
+      if (positionData.length) {
+        await this.prisma.position.createMany({
+          data: positionData.map((p) => ({
+            portfolioSnapshotId: snapshot.id,
+            opportunityId: p.opportunityId,
+            weight: p.weight,
+            convictionScore: p.convictionScore,
+            entryPrice: p.entryPrice,
+          })),
+        });
+      }
+
       await this.prisma.performanceSnapshot.create({
         data: {
-          portfolioSnapshot: { connect: { id: snapshot.id } },
-          manager: { connect: { id: managerId } },
+          portfolioSnapshotId: snapshot.id,
+          managerId,
           nav,
           dailyReturn: round(intervalReturn, 6),
           cumulativeReturn,
