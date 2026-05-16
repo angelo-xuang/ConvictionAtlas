@@ -824,28 +824,39 @@ export class QueryService {
       },
     ];
 
+    // Pre-compute BTC reference for MA20 regime filter
+    const btcRef = universe.find((o) => o.title.toLowerCase().includes('bitcoin'));
+
     for (let index = 0; index < timestamps.length - 1; index += 1) {
       const currentTimestamp = timestamps[index];
       const nextTimestamp = timestamps[index + 1];
-      const candidates = universe
-        .map((opportunity) =>
-          this.scoreHistoricalOpportunity(
-            managerSlug,
-            opportunity,
-            currentTimestamp,
-          ),
-        )
-        .filter(
-          (
-            candidate,
-          ): candidate is {
-            score: number;
-            targetWeight: number;
-            historyPoints: HistoryPointLike[];
-          } => candidate !== null && candidate.score > blueprint.bullishThreshold,
-        )
-        .sort((left, right) => right.score - left.score)
-        .slice(0, blueprint.maxPositions);
+
+      // MA20 regime filter: invest only when BTC is above 20-day moving average
+      const regimeOk = btcRef
+        ? this.isReplayAboveMA(btcRef, currentTimestamp, 20)
+        : true;
+
+      const candidates = regimeOk
+        ? universe
+            .map((opportunity) =>
+              this.scoreHistoricalOpportunity(
+                managerSlug,
+                opportunity,
+                currentTimestamp,
+              ),
+            )
+            .filter(
+              (
+                candidate,
+              ): candidate is {
+                score: number;
+                targetWeight: number;
+                historyPoints: HistoryPointLike[];
+              } => candidate !== null && candidate.score > blueprint.bullishThreshold,
+            )
+            .sort((left, right) => right.score - left.score)
+            .slice(0, blueprint.maxPositions)
+        : [];
 
       const investableCapital = candidates.length ? 1 - blueprint.cashFloor : 0;
       const scoreTotal =
@@ -2215,6 +2226,25 @@ export class QueryService {
     }
 
     return selectedPoint;
+  }
+
+  private isReplayAboveMA(
+    opp: ReplayPreparedOpportunity,
+    timestamp: number,
+    periodDays: number,
+  ): boolean {
+    const currentPoint = this.getPointAtOrBefore(opp.historyPoints, timestamp);
+    if (!currentPoint) return true;
+
+    const windowStart = timestamp - periodDays * 24 * 60 * 60 * 1000;
+    const windowPoints = opp.historyPoints.filter(
+      (p) => p.pointAt.getTime() >= windowStart && p.pointAt.getTime() <= timestamp,
+    );
+
+    if (windowPoints.length < 5) return true;
+
+    const ma = windowPoints.reduce((s, p) => s + p.price, 0) / windowPoints.length;
+    return currentPoint.price > ma;
   }
 
   private async getManagerOrThrow(slug: string) {
