@@ -213,6 +213,7 @@ export class BacktestService {
           managerId,
           cashWeight,
           grossExposure: round(1 - cashWeight, 4),
+          netExposure: round(1 - cashWeight - (cashWeight > 0.5 ? 0 : 0), 4),
           riskScore,
           nav,
         } as any,
