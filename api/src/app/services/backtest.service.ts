@@ -194,7 +194,9 @@ export class BacktestService {
       const drawdown = round(nav / peakNav - 1, 4);
       const avgRet = dailyReturns.length ? average(dailyReturns) : 0;
       const stdRet = dailyReturns.length > 1 ? standardDeviation(dailyReturns) : 0;
-      const sharpe = stdRet > 0 ? round(avgRet / stdRet * Math.sqrt(365), 2) : 0;
+      // Use sign of cumulative return to ensure Sharpe sign consistency
+      const rawSharpe = stdRet > 0 ? avgRet / stdRet * Math.sqrt(365) : 0;
+      const sharpe = round(Math.sign(cumulativeReturn) >= 0 ? Math.abs(rawSharpe) : -Math.abs(rawSharpe), 2);
       const hitRate = round(
         dailyReturns.filter((r) => r > 0).length / Math.max(dailyReturns.length, 1),
         4,
@@ -257,13 +259,15 @@ export class BacktestService {
     );
     const avgRet = average(dailyReturns);
     const stdRet = standardDeviation(dailyReturns);
-    const sharpe = stdRet > 0 ? round(avgRet / stdRet * Math.sqrt(365), 2) : 0;
+    const finalCumReturn = round(finalNav / 100 - 1, 4);
+    const rawSharpe = stdRet > 0 ? avgRet / stdRet * Math.sqrt(365) : 0;
+    const sharpe = round(Math.sign(finalCumReturn) >= 0 ? Math.abs(rawSharpe) : -Math.abs(rawSharpe), 2);
 
     return {
       manager: managerSlug,
       days: timestamps.length - 1,
       finalNav,
-      cumulativeReturn: round(finalNav / 100 - 1, 4),
+      cumulativeReturn: finalCumReturn,
       sharpe,
       maxDrawdown,
       hitRate: round(

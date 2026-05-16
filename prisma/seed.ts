@@ -209,46 +209,6 @@ const managers = [
       },
     ],
   },
-  {
-    slug: 'polymarket-specialist-manager',
-    name: 'Polymarket Specialist',
-    description:
-      'Hunts mispriced probabilities across crypto prediction markets on Polymarket. Buys YES/NO positions when market odds diverge from news-implied fair value. Holds no spot tokens — pure prediction market alpha.',
-    style: 'Prediction Markets',
-    riskProfile: 'Opportunistic',
-    rebalanceCadence: 'Intraday',
-    memoStyle: 'Probability arbitrage thesis with event calendar',
-    universe: 'Polymarket crypto prediction markets (BTC, ETH, SOL price targets, protocol events, ecosystem milestones)',
-    pricingSummary: '$35/month prediction desk',
-    metadata: JSON.stringify({
-      signalWeights: {
-        probability_edge: 0.30,
-        event_proximity: 0.22,
-        catalyst_setup: 0.18,
-        news_heat: 0.12,
-        narrative_strength: 0.10,
-        volume_spike: 0.08,
-        market_momentum: 0.06,
-        risk_flag: -0.22,
-      },
-      thresholds: {
-        bullish: 0.08,
-        bearish: -0.08,
-      },
-      opportunityTypeBias: {
-        TOKEN: -0.20,
-        PREDICTION_MARKET: 0.20,
-      },
-    }),
-    pricingPlans: [
-      {
-        name: 'Prediction Desk',
-        cadence: 'monthly',
-        amountUsd: 35,
-        description: 'Daily Polymarket edge reports, probability drift alerts, and event resolution calendar.',
-      },
-    ],
-  },
 ];
 
 async function main() {
