@@ -2183,25 +2183,25 @@ export class QueryService {
 
     if (managerSlug === 'narrative-manager') {
       return type === OpportunityType.TOKEN
-        ? clamp(rawReturn, -0.03, 0.05)
-        : clamp(rawReturn, -0.08, 0.14) * 0.22;
+        ? clamp(rawReturn, -0.05, 0.10)
+        : clamp(rawReturn, -0.10, 0.16) * 0.28;
     }
 
     if (managerSlug === 'quant-manager') {
       return type === OpportunityType.TOKEN
-        ? clamp(rawReturn, -0.025, 0.04)
-        : clamp(rawReturn, -0.06, 0.1) * 0.18;
+        ? clamp(rawReturn, -0.04, 0.07)
+        : clamp(rawReturn, -0.08, 0.12) * 0.24;
     }
 
     if (managerSlug === 'hybrid-manager') {
       return type === OpportunityType.TOKEN
-        ? clamp(rawReturn, -0.03, 0.045)
-        : clamp(rawReturn, -0.07, 0.11) * 0.2;
+        ? clamp(rawReturn, -0.04, 0.08)
+        : clamp(rawReturn, -0.09, 0.14) * 0.26;
     }
 
     return type === OpportunityType.TOKEN
-      ? clamp(rawReturn, -0.035, 0.045)
-      : clamp(rawReturn, -0.07, 0.08) * 0.18;
+      ? clamp(rawReturn, -0.04, 0.06)
+      : clamp(rawReturn, -0.08, 0.10) * 0.24;
   }
 
   private getPointAtOrBefore(points: HistoryPointLike[], timestamp: number) {

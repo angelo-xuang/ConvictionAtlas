@@ -13,133 +13,119 @@ export type ManagerBlueprint = {
 
 export const MANAGER_BLUEPRINTS: ManagerBlueprint[] = [
   {
-    // Narrative Manager: story-driven, hunts breakout themes in TOKEN markets.
-    // Should strongly prefer tokens over prediction markets — narratives
-    // are about sentiment and attention around real crypto assets.
     slug: 'narrative-manager',
     label: 'Narrative Manager',
     signalWeights: {
-      narrative_strength: 0.26,
-      news_heat: 0.18,
-      market_momentum: 0.14,
-      trend_regime: 0.16,
-      opportunity_quality: 0.18,
-      volume_spike: 0.08,
-      event_proximity: 0.04,         // Reduced: narratives aren't event-driven
-      price_dislocation: 0.06,
-      risk_flag: -0.16,
+      narrative_strength: 0.22,
+      news_heat: 0.16,
+      market_momentum: 0.10,
+      trend_regime: 0.18,
+      opportunity_quality: 0.20,
+      volume_spike: 0.06,
+      event_proximity: 0.03,
+      price_dislocation: 0.05,
+      risk_flag: -0.28,
     },
-    bullishThreshold: 0.14,           // Raised: be more selective
+    bullishThreshold: 0.22,
     bearishThreshold: -0.12,
     opportunityTypeBias: {
-      TOKEN: 0.10,                    // Strong token preference — narratives live here
-      PREDICTION_MARKET: -0.18,       // Heavily penalise prediction markets
+      TOKEN: 0.10,
+      PREDICTION_MARKET: -0.18,
     },
-    cashFloor: 0.18,
-    maxPositions: 5,
+    cashFloor: 0.35,
+    maxPositions: 4,
   },
   {
-    // Event-driven Manager: tracks catalyst calendars across BOTH markets.
-    // Slight lean toward prediction markets but also trades token catalysts.
     slug: 'event-driven-manager',
     label: 'Event-driven Manager',
     signalWeights: {
-      catalyst_setup: 0.26,
-      event_proximity: 0.18,
-      probability_edge: 0.12,
-      trend_regime: 0.1,
+      catalyst_setup: 0.22,
+      event_proximity: 0.16,
+      probability_edge: 0.10,
+      trend_regime: 0.12,
       news_heat: 0.08,
-      narrative_strength: 0.08,
-      opportunity_quality: 0.08,
-      market_momentum: 0.05,
-      volume_spike: 0.07,
-      risk_flag: -0.18,
+      narrative_strength: 0.06,
+      opportunity_quality: 0.12,
+      market_momentum: 0.04,
+      volume_spike: 0.06,
+      risk_flag: -0.26,
     },
-    bullishThreshold: 0.10,           // Raised from 0.035 — too many low-quality passes
+    bullishThreshold: 0.16,
     bearishThreshold: -0.12,
     opportunityTypeBias: {
       TOKEN: 0.04,
-      PREDICTION_MARKET: 0.04,        // Reduced from 0.06 — was letting too many through
+      PREDICTION_MARKET: 0.04,
     },
-    cashFloor: 0.15,
-    maxPositions: 6,
+    cashFloor: 0.30,
+    maxPositions: 4,
   },
   {
-    // Quant Manager: pure price-action and momentum signals on tokens.
-    // Should NOT hold prediction markets — they have no price-momentum profile.
     slug: 'quant-manager',
     label: 'Quant Manager',
     signalWeights: {
-      market_momentum: 0.26,
-      trend_regime: 0.22,
-      volume_spike: 0.16,
-      price_dislocation: 0.14,
-      opportunity_quality: 0.16,
-      probability_edge: 0.04,         // Reduced: quant doesn't care about probabilities
-      event_proximity: 0.02,          // Minimal: quant is price-driven not event-driven
-      risk_flag: -0.18,
+      market_momentum: 0.22,
+      trend_regime: 0.24,
+      volume_spike: 0.12,
+      price_dislocation: 0.10,
+      opportunity_quality: 0.18,
+      probability_edge: 0.03,
+      event_proximity: 0.01,
+      risk_flag: -0.30,
     },
-    bullishThreshold: 0.14,           // Raised: be more selective
+    bullishThreshold: 0.20,
     bearishThreshold: -0.12,
     opportunityTypeBias: {
-      TOKEN: 0.12,                    // Strong token preference — quant = price action
-      PREDICTION_MARKET: -0.22,       // Very strong bias away — no momentum signal
+      TOKEN: 0.12,
+      PREDICTION_MARKET: -0.22,
     },
-    cashFloor: 0.2,
-    maxPositions: 6,
+    cashFloor: 0.35,
+    maxPositions: 4,
   },
   {
-    // Hybrid Manager: balanced across all dimensions, but leans toward tokens.
-    // May take a small prediction market position if the signal is very strong.
     slug: 'hybrid-manager',
     label: 'Hybrid Manager',
     signalWeights: {
-      market_momentum: 0.14,
-      trend_regime: 0.12,
-      narrative_strength: 0.14,
-      news_heat: 0.12,
-      opportunity_quality: 0.16,
-      event_proximity: 0.08,          // Reduced from 0.1
-      volume_spike: 0.12,
-      price_dislocation: 0.10,
-      probability_edge: 0.06,         // Reduced from 0.08
-      risk_flag: -0.14,
+      market_momentum: 0.12,
+      trend_regime: 0.16,
+      narrative_strength: 0.10,
+      news_heat: 0.10,
+      opportunity_quality: 0.18,
+      event_proximity: 0.06,
+      volume_spike: 0.08,
+      price_dislocation: 0.08,
+      probability_edge: 0.04,
+      risk_flag: -0.26,
     },
-    bullishThreshold: 0.12,           // Raised from 0.10
+    bullishThreshold: 0.18,
     bearishThreshold: -0.12,
     opportunityTypeBias: {
-      TOKEN: 0.06,                    // Moderate token preference
-      PREDICTION_MARKET: -0.12,       // Moderate prediction market penalty
+      TOKEN: 0.06,
+      PREDICTION_MARKET: -0.12,
     },
-    cashFloor: 0.15,
-    maxPositions: 6,
+    cashFloor: 0.35,
+    maxPositions: 4,
   },
   {
-    // On-chain Fundamentals: ignores price action and news entirely.
-    // Signal comes from DeFiLlama TVL flows, whale wallet accumulation,
-    // smart money netflow (Nansen/Mobula), and protocol fee revenue.
-    // High cash floor — only acts on strong on-chain conviction.
-    // Should NEVER hold prediction markets — they have no on-chain signal.
     slug: 'onchain-fundamentals-manager',
     label: 'On-chain Fundamentals',
     signalWeights: {
-      opportunity_quality: 0.28,    // Protocol TVL + revenue quality
-      volume_spike: 0.22,           // On-chain volume is truth
-      trend_regime: 0.16,           // Chain-level TVL trend direction
-      price_dislocation: 0.18,      // Price lagging on-chain fundamentals = edge
-      probability_edge: 0.04,       // Minimal: prediction market confirmation
-      event_proximity: 0.06,        // Protocol upgrades/launches
-      narrative_strength: 0.04,     // Very low weight — we distrust narrative
-      risk_flag: -0.24,             // Hard exit on TVL drain or smart money exit
+      opportunity_quality: 0.26,
+      volume_spike: 0.18,
+      trend_regime: 0.18,
+      price_dislocation: 0.14,
+      probability_edge: 0.03,
+      event_proximity: 0.04,
+      narrative_strength: 0.02,
+      risk_flag: -0.32,
     },
-    bullishThreshold: 0.16,         // Raised: only very strong on-chain signal
+    bullishThreshold: 0.22,
     bearishThreshold: -0.10,
     opportunityTypeBias: {
-      TOKEN: 0.12,                  // Strong token bias — on-chain = real assets
-      PREDICTION_MARKET: -0.25,     // Very strong penalty — prediction markets have no TVL
+      TOKEN: 0.12,
+      PREDICTION_MARKET: -0.25,
     },
-    cashFloor: 0.30,                // Conservative — on-chain conviction takes time
-    maxPositions: 5,                // Concentrated: only highest-conviction protocols
+    cashFloor: 0.40,
+    maxPositions: 3,
   },
 ];
 
