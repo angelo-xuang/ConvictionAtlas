@@ -144,8 +144,8 @@ export class BacktestService {
       const currentTs = timestamps[i];
       const nextTs = timestamps[i + 1];
 
-      // Market regime filter: 50-day MA crossover — invest only when BTC > MA50
-      const regimeOk = btcRef ? this.isAboveMA(btcRef, currentTs, 50) : true;
+      // Market regime filter: 20-day MA crossover — invest only when BTC > MA20
+      const regimeOk = btcRef ? this.isAboveMA(btcRef, currentTs, 20) : true;
 
       let candidates: Array<{
         opp: BacktestOpportunity;
