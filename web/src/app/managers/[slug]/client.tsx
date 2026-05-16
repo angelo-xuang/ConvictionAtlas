@@ -1,23 +1,16 @@
 'use client';
+
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { AssetAvatar } from '../../../components/asset-avatar';
-import { BuySharesButton } from '../../../components/buy-shares-button';
-import { MarkdownContent } from '../../../components/markdown-content';
-import { MemoUnlockButton } from '../../../components/memo-unlock-button';
-import { PositionStack } from '../../../components/position-stack';
-import { ReviewForm } from '../../../components/review-form';
-import { SignalBars } from '../../../components/signal-bars';
-import { Sparkline } from '../../../components/sparkline';
+import { PerfLine, MiniLine, BarChart } from '../../../components/Chart';
 import {
   fetchPageData,
-  formatDateTime,
   formatMoney,
-  formatPercent,
   formatReturn,
-  getDirectionClass,
+  formatPercent,
+  formatDateTime,
   getSignedClass,
+  getDirectionClass,
 } from '../../../lib/api';
 import type {
   ManagerDetail,
@@ -27,10 +20,16 @@ import type {
   PortfolioSnapshot,
 } from '../../../lib/types';
 
-export default function ManagerDetailPage() {
-  const params = useParams();
-  const slug = params?.slug as string;
+function formatShortDate(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(value));
+}
 
+type Props = { slug: string };
+
+export default function ManagerDetailClient({ slug }: Props) {
   const [manager, setManager] = useState<ManagerDetail | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioSnapshot | null>(null);
   const [rebalances, setRebalances] = useState<ManagerRebalance[]>([]);
@@ -47,236 +46,193 @@ export default function ManagerDetailPage() {
       fetchPageData<Memo[]>(`/managers/${slug}/memos`),
       fetchPageData<ManagerReviewsResponse>(`/managers/${slug}/reviews`),
     ])
-      .then(([managerData, portfolioData, rebalancesData, memosData, reviewsData]) => {
-        setManager(managerData ?? null);
-        setPortfolio(portfolioData ?? null);
-        setRebalances(rebalancesData ?? []);
-        setMemos(memosData ?? []);
-        setReviews(reviewsData ?? null);
+      .then(([mgr, pf, rb, mm, rv]) => {
+        setManager(mgr ?? null);
+        setPortfolio(pf ?? null);
+        setRebalances(rb ?? []);
+        setMemos(mm ?? []);
+        setReviews(rv ?? null);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [slug]);
 
-  if (loading) return <div className="loading">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="shell">
+        <div style={{ padding: '120px 0', textAlign: 'center' }}>
+          <div className="stat-value" style={{ color: 'var(--text-muted)' }}>Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!manager) {
     return (
-      <section className="section">
-        <div className="error-card">
-          Manager detail is not available. Confirm the API is running and the pipeline
-          has produced manager snapshots.
+      <div className="shell">
+        <div className="error-card mt-6">
+          Manager detail is not available. Confirm the API is running and the pipeline has produced snapshots.
         </div>
-      </section>
+      </div>
     );
   }
 
   const livePortfolio = portfolio ?? manager.latestPortfolio;
-  const derivedPerformance = manager.derivedPerformance;
+  const dp = manager.derivedPerformance;
   const reviewState = reviews ?? {
     averageRating: manager.ratingAverage,
     total: manager.reviews.length,
     reviews: manager.reviews,
   };
-  const actionRows = rebalances ?? [];
-  const memoRows = memos ?? [];
-  const chartLabels = getChartLabels(manager.performanceSeries);
-  const valueLabels = getValueLabels(manager.performanceSeries);
+
+  const navPoints = manager.performanceSeries.map((p) => p.nav);
+  const dateLabels = manager.performanceSeries.map((p) => formatShortDate(p.pointAt));
+  const perfTone: 'positive' | 'negative' | 'neutral' =
+    dp.cumulativeReturn > 0 ? 'positive'
+      : dp.cumulativeReturn < 0 ? 'negative'
+        : 'neutral';
 
   return (
-    <div className="page-stack">
-      <section className="hero hero-compact manager-detail-hero">
-        <div>
-          <div className="breadcrumbs">
-            <Link href="/">Home</Link>
-            <span>/</span>
-            <Link href="/managers">Managers</Link>
-            <span>/</span>
-            <span>{manager.name}</span>
-          </div>
-          <div className="manager-detail-heading">
-            <AssetAvatar
-              title={manager.name}
-              symbol={manager.name}
-              sourceKind={manager.style}
-              size="lg"
-            />
-            <div>
-              <div className="tag-row">
-                <span className="pill">{manager.style}</span>
-                <span className="chip">{manager.riskProfile}</span>
-                <span className="chip">{manager.rebalanceCadence}</span>
-              </div>
-              <h1 className="detail-headline">{manager.name}</h1>
-            </div>
-          </div>
-          <p className="detail-copy">{manager.description}</p>
-          <div className="tag-row">
-            <span className="chip">{manager.memoStyle}</span>
-            <span className="chip">{manager.universe}</span>
-            <span className="chip">{manager.pricingSummary ?? 'Pricing pending'}</span>
-          </div>
-          <div className="cta-row">
-            <Link href="/leaderboard" className="button-link primary">
-              Compare desks
-            </Link>
-            <Link href="/opportunities" className="button-link">
-              Browse opportunity tape
-            </Link>
-          </div>
-          <BuySharesButton managerSlug={manager.slug} managerName={manager.name} />
+    <div className="shell">
+      {/* ── Header ── */}
+      <div className="page-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+        <div className="breadcrumb">
+          <Link href="/">Home</Link>
+          <span>/</span>
+          <Link href="/managers">Managers</Link>
+          <span>/</span>
+          <span style={{ color: 'var(--text)' }}>{manager.name}</span>
         </div>
 
-        <div className="manager-detail-hero-card">
-          <div className="mini-metrics">
-            <span className="eyebrow">
-              {derivedPerformance.lookbackDays
-                ? `${derivedPerformance.lookbackDays.toFixed(0)}d lookback`
-                : 'Backtest lookback'}
+        <div className="flex items-center gap-4 mb-2">
+          <div className="avatar avatar-lg">{manager.name.charAt(0)}</div>
+          <div>
+            <h1 style={{ marginBottom: 4 }}>{manager.name}</h1>
+            <div className="detail-tags">
+              <span className="badge badge-accent">{manager.style}</span>
+              <span className="badge badge-warning">{manager.riskProfile}</span>
+              <span className="badge badge-neutral">{manager.rebalanceCadence}</span>
+              {manager.universe && <span className="badge badge-neutral">{manager.universe}</span>}
+            </div>
+          </div>
+        </div>
+
+        <p className="muted" style={{ marginTop: 8, maxWidth: 640 }}>
+          {manager.description}
+        </p>
+
+        {/* Quick stats row */}
+        <div className="stat-grid mt-4" style={{ maxWidth: 720 }}>
+          <div className="stat-item">
+            <span className="stat-label">NAV</span>
+            <span className="stat-value tabular">{formatMoney(dp.nav)}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Cum. Return</span>
+            <span className={`stat-value tabular ${getSignedClass(dp.cumulativeReturn)}`}>
+              {formatReturn(dp.cumulativeReturn)}
             </span>
-            <strong className={getSignedClass(derivedPerformance.cumulativeReturn)}>
-              {formatReturn(derivedPerformance.cumulativeReturn)}
-            </strong>
           </div>
-          <div className="manager-detail-nav">{formatMoney(derivedPerformance.nav)}</div>
-          <Sparkline
-            className="detail-curve"
-            points={manager.performanceSeries.map((point) => point.nav)}
-            height={160}
-            area={false}
-            showAxes
-            xLabels={chartLabels}
-            yLabels={valueLabels}
-            tone={
-              derivedPerformance.cumulativeReturn > 0
-                ? 'positive'
-                : derivedPerformance.cumulativeReturn < 0
-                  ? 'negative'
-                  : 'neutral'
-            }
-          />
-          <div className="manager-detail-stat-grid">
-            <div>
-              <div className="eyebrow">Daily</div>
-              <strong className={getSignedClass(derivedPerformance.dailyReturn)}>
-                {formatReturn(derivedPerformance.dailyReturn)}
-              </strong>
-            </div>
-            <div>
-              <div className="eyebrow">Sharpe</div>
-              <strong>{derivedPerformance.sharpe.toFixed(2)}</strong>
-            </div>
-            <div>
-              <div className="eyebrow">Hit rate</div>
-              <strong>{formatPercent(derivedPerformance.hitRate * 100)}</strong>
-            </div>
-            <div>
-              <div className="eyebrow">Drawdown</div>
-              <strong>{formatReturn(derivedPerformance.drawdown)}</strong>
-            </div>
+          <div className="stat-item">
+            <span className="stat-label">Drawdown</span>
+            <span className="stat-value tabular">{formatReturn(dp.drawdown)}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Sharpe</span>
+            <span className="stat-value tabular">{dp.sharpe.toFixed(2)}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Hit Rate</span>
+            <span className="stat-value tabular">{formatPercent(dp.hitRate * 100)}</span>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className="manager-dashboard-grid">
-        <div className="manager-primary-column">
-          <div className="panel manager-performance-panel">
-            <div className="section-header">
-              <h2 className="section-title">Performance curve</h2>
-              <span className="muted">
-                90-day walk-forward backtest on stored real price and news history
+      {/* ── Two-column layout ── */}
+      <div className="detail-layout">
+        {/* ── Main column ── */}
+        <div className="detail-main">
+          {/* Performance chart */}
+          <div className="perf-card">
+            <div className="card-header">
+              <h2 style={{ fontSize: '0.95rem' }}>Performance Curve</h2>
+              <span className="muted text-xs">
+                {dp.lookbackDays ? `${dp.lookbackDays.toFixed(0)}d lookback` : 'Backtest'}
               </span>
             </div>
-            <Sparkline
-              className="performance-curve-large"
-              points={manager.performanceSeries.map((point) => point.nav)}
-              height={220}
-              area={false}
-              showAxes
-              xLabels={chartLabels}
-              yLabels={valueLabels}
-              dateLabels={manager.performanceSeries.map((point) => formatShortDate(point.pointAt))}
-              formatValue={(v) => formatMoney(v)}
-              tone={
-                derivedPerformance.cumulativeReturn > 0
-                  ? 'positive'
-                  : derivedPerformance.cumulativeReturn < 0
-                    ? 'negative'
-                    : 'neutral'
-              }
-            />
-            <div className="manager-timeline">
-              {manager.performanceSeries.slice(0, 1).map((point) => (
-                <span key={point.pointAt}>{formatDateTime(point.pointAt)}</span>
-              ))}
-              {manager.performanceSeries.slice(-1).map((point) => (
-                <span key={point.pointAt}>{formatDateTime(point.pointAt)}</span>
-              ))}
+            <div className="chart-area">
+              <PerfLine
+                points={navPoints}
+                dateLabels={dateLabels}
+                height={220}
+                tone={perfTone}
+                showArea
+              />
             </div>
-          </div>
-
-          <div className="panel">
-            <div className="section-header">
-              <h2 className="section-title">Current actions</h2>
-              <span className="muted">Top current model outputs by conviction</span>
-            </div>
-            <div className="action-grid">
-              {manager.latestDecisions.length ? (
-                manager.latestDecisions.map((decision) => (
-                  <div key={decision.id} className="action-card">
-                    <div className="mini-metrics">
-                      <strong className={getDirectionClass(decision.direction)}>
-                        {decision.direction.toLowerCase()}
-                      </strong>
-                      <span>{formatPercent(decision.targetWeight * 100)}</span>
-                    </div>
-                    <div className="action-card-row">
-                      <AssetAvatar
-                        title={decision.opportunity.title}
-                        imageUrl={decision.opportunity.imageUrl}
-                        symbol={decision.opportunity.symbol}
-                        sourceKind={decision.opportunity.sourceKind}
-                      />
-                      <div>
-                        <Link href={`/opportunities/detail?slug=${decision.opportunity.slug}`}>
-                          <strong>{decision.opportunity.title}</strong>
-                        </Link>
-                        <div className="muted">
-                          Conviction {decision.convictionScore.toFixed(3)}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mini-metrics">
-                      <span className={getSignedClass(decision.opportunity.priceChange24h)}>
-                        {formatPercent(decision.opportunity.priceChange24h)}
-                      </span>
-                      <span>{formatMoney(decision.opportunity.currentPrice)}</span>
-                    </div>
-                    <div className="action-card-rationale muted">{decision.rationale}</div>
-                  </div>
-                ))
-              ) : (
-                <div className="muted">No manager decisions are stored yet.</div>
+            <div className="flex justify-between mt-2 text-xs muted">
+              {manager.performanceSeries[0] && (
+                <span>{formatDateTime(manager.performanceSeries[0].pointAt)}</span>
+              )}
+              {manager.performanceSeries[manager.performanceSeries.length - 1] && (
+                <span>{formatDateTime(manager.performanceSeries[manager.performanceSeries.length - 1].pointAt)}</span>
               )}
             </div>
           </div>
 
-          <div className="panel">
-            <div className="section-header">
-              <h2 className="section-title">Research memos</h2>
-              <span className="muted">Generated from the current live portfolio state</span>
+          {/* Current decisions */}
+          <div className="card">
+            <div className="card-header">
+              <h2 style={{ fontSize: '0.95rem' }}>Current Decisions</h2>
+              <span className="muted text-xs">Top model outputs by conviction</span>
             </div>
-            {memoRows.length ? (
-              <div className="card-grid">
-                {memoRows.map((memo) => (
-                  <div key={memo.id} className="panel panel-nested">
-                    <div className="tag-row">
-                      <span className="pill">{memo.generatedBy}</span>
-                      <span className="chip">{memo.accessTier}</span>
+            {manager.latestDecisions.length > 0 ? (
+              <div className="decision-grid">
+                {manager.latestDecisions.map((d) => (
+                  <div key={d.id} className="decision-card">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`badge ${getDirectionClass(d.direction)}`}>
+                        {d.direction}
+                      </span>
+                      <span className="text-xs tabular muted">
+                        {formatPercent(d.targetWeight * 100)} weight
+                      </span>
                     </div>
-                    <h3>{memo.title}</h3>
-                    <p className="muted">{memo.summary}</p>
-                    <div className="mini-metrics">
+                    <Link href={`/opportunities/detail?slug=${d.opportunity.slug}`} style={{ fontWeight: 600, fontSize: '0.88rem' }}>
+                      {d.opportunity.title}
+                    </Link>
+                    <div className="flex items-center justify-between mt-2 text-xs">
+                      <span className="muted">
+                        Conviction {d.convictionScore.toFixed(3)}
+                      </span>
+                      {d.opportunity.currentPrice != null && (
+                        <span className="tabular">{formatMoney(d.opportunity.currentPrice)}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="muted text-sm">No active decisions.</div>
+            )}
+          </div>
+
+          {/* Memos */}
+          <div className="card">
+            <div className="card-header">
+              <h2 style={{ fontSize: '0.95rem' }}>Research Memos</h2>
+              <span className="muted text-xs">Generated from current live portfolio</span>
+            </div>
+            {memos.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {memos.map((memo) => (
+                  <div key={memo.id} className="memo-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="badge badge-accent">{memo.generatedBy}</span>
+                      <span className="badge badge-neutral">{memo.accessTier}</span>
+                    </div>
+                    <h3 style={{ fontSize: '0.92rem', marginBottom: 4 }}>{memo.title}</h3>
+                    <p className="muted text-sm">{memo.summary}</p>
+                    <div className="flex items-center justify-between mt-2 text-xs muted">
                       <span>{formatDateTime(memo.createdAt)}</span>
                       {memo.opportunity ? (
                         <Link href={`/opportunities/detail?slug=${memo.opportunity.slug}`}>
@@ -286,212 +242,190 @@ export default function ManagerDetailPage() {
                         <span>No linked opportunity</span>
                       )}
                     </div>
-                    <MarkdownContent content={memo.content} className="rich-text" />
-                    <MemoUnlockButton memoId={memo.id} />
+                    {memo.content && (
+                      <div
+                        className="memo-content"
+                        dangerouslySetInnerHTML={{ __html: memo.content }}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="muted">No memo has been generated for this manager yet.</div>
+              <div className="muted text-sm">No memos generated yet.</div>
             )}
           </div>
         </div>
 
-        <div className="manager-secondary-column">
-          <div className="panel">
-            <div className="section-header">
-              <h2 className="section-title">Book structure</h2>
-              <span className="muted">{livePortfolio?.positions?.length ?? 0} positions</span>
+        {/* ── Sidebar ── */}
+        <div className="detail-sidebar">
+          {/* Portfolio stats */}
+          <div className="card">
+            <div className="card-header">
+              <h2 style={{ fontSize: '0.95rem' }}>Portfolio Stats</h2>
+              <span className="muted text-xs">{livePortfolio?.positions?.length ?? 0} positions</span>
             </div>
-            <div className="manager-book-metrics">
-              <div className="manager-book-metric">
-                <span className="eyebrow">Gross exposure</span>
-                <strong>{formatPercent((livePortfolio?.grossExposure ?? 0) * 100)}</strong>
+            <div className="stat-grid">
+              <div className="stat-item">
+                <span className="stat-label">Gross</span>
+                <span className="stat-value" style={{ fontSize: '1.1rem' }}>
+                  {formatPercent((livePortfolio?.grossExposure ?? 0) * 100)}
+                </span>
               </div>
-              <div className="manager-book-metric">
-                <span className="eyebrow">Cash</span>
-                <strong>{formatPercent((livePortfolio?.cashWeight ?? 0) * 100)}</strong>
+              <div className="stat-item">
+                <span className="stat-label">Cash</span>
+                <span className="stat-value" style={{ fontSize: '1.1rem' }}>
+                  {formatPercent((livePortfolio?.cashWeight ?? 0) * 100)}
+                </span>
               </div>
-              <div className="manager-book-metric">
-                <span className="eyebrow">Risk score</span>
-                <strong>{(livePortfolio?.riskScore ?? 0).toFixed(2)}</strong>
+              <div className="stat-item">
+                <span className="stat-label">Risk</span>
+                <span className="stat-value" style={{ fontSize: '1.1rem' }}>
+                  {(livePortfolio?.riskScore ?? 0).toFixed(2)}
+                </span>
               </div>
-              <div className="manager-book-metric">
-                <span className="eyebrow">Rating</span>
-                <strong>{reviewState.averageRating?.toFixed(2) ?? '--'}</strong>
+              <div className="stat-item">
+                <span className="stat-label">Rating</span>
+                <span className="stat-value" style={{ fontSize: '1.1rem' }}>
+                  {reviewState.averageRating?.toFixed(2) ?? '--'}
+                </span>
               </div>
             </div>
-            <PositionStack
-              positions={
-                livePortfolio?.positions?.map((position) => ({
-                  id: position.id,
-                  title: position.opportunity.title,
-                  weight: position.weight,
-                  imageUrl: position.opportunity.imageUrl,
-                  symbol: position.opportunity.symbol,
-                  sourceKind: position.opportunity.sourceKind,
-                })) ?? []
-              }
-            />
-            <div className="portfolio-list">
-              {livePortfolio?.positions?.length ? (
-                livePortfolio.positions.map((position) => (
-                  <div key={position.id} className="portfolio-row">
-                    <div className="portfolio-row-main">
-                      <AssetAvatar
-                        title={position.opportunity.title}
-                        imageUrl={position.opportunity.imageUrl}
-                        symbol={position.opportunity.symbol}
-                        sourceKind={position.opportunity.sourceKind}
-                      />
-                      <div>
-                        <Link href={`/opportunities/detail?slug=${position.opportunity.slug}`}>
-                          <strong>{position.opportunity.title}</strong>
-                        </Link>
-                        <div className="muted">
-                          Conviction {position.convictionScore.toFixed(3)}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="portfolio-row-metrics">
-                      <strong>{formatPercent(position.weight * 100)}</strong>
-                      <span className={getSignedClass(position.opportunity.priceChange24h)}>
-                        {formatPercent(position.opportunity.priceChange24h)}
+          </div>
+
+          {/* Positions list */}
+          <div className="card">
+            <div className="card-header">
+              <h2 style={{ fontSize: '0.95rem' }}>Positions</h2>
+            </div>
+            {livePortfolio?.positions?.length ? (
+              <div className="positions-list">
+                {livePortfolio.positions.map((pos) => (
+                  <div key={pos.id} className="position-row">
+                    <div className="avatar avatar-sm">{pos.opportunity.title.charAt(0)}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Link
+                        href={`/opportunities/detail?slug=${pos.opportunity.slug}`}
+                        className="truncate"
+                        style={{ fontWeight: 600, fontSize: '0.82rem', display: 'block' }}
+                      >
+                        {pos.opportunity.title}
+                      </Link>
+                      <span className="muted text-xs">
+                        Conviction {pos.convictionScore.toFixed(3)}
                       </span>
                     </div>
-                    <div className="position-track">
-                      <div
-                        className="position-fill"
-                        style={{ width: `${Math.max(position.weight * 100, 4)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="muted">
-                  No bullish opportunity cleared this manager&apos;s threshold on the latest
-                  rebalance.
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="panel">
-            <div className="section-header">
-              <h2 className="section-title">Signal architecture</h2>
-              <span className="muted">The bias map behind this desk</span>
-            </div>
-            <SignalBars items={manager.signalMix} />
-          </div>
-
-          <div className="panel">
-            <div className="section-header">
-              <h2 className="section-title">Rebalance tape</h2>
-              <span className="muted">Current snapshot versus previous snapshot</span>
-            </div>
-            {actionRows.length ? (
-              <div className="action-tape">
-                {actionRows.map((rebalance) => (
-                  <div key={rebalance.opportunityId} className="tape-row">
-                    <div className="action-card-row">
-                      <AssetAvatar
-                        title={rebalance.opportunityTitle}
-                        imageUrl={rebalance.opportunityImageUrl}
-                        symbol={rebalance.opportunitySymbol}
-                        size="sm"
-                      />
-                      <div>
-                        {rebalance.opportunitySlug ? (
-                          <Link href={`/opportunities/detail?slug=${rebalance.opportunitySlug}`}>
-                            <strong>{rebalance.opportunityTitle}</strong>
-                          </Link>
-                        ) : (
-                          <strong>{rebalance.opportunityTitle}</strong>
-                        )}
-                        <div className="muted">
-                          {rebalance.delta > 0
-                            ? 'Added risk'
-                            : rebalance.delta < 0
-                              ? 'Trimmed risk'
-                              : 'No change'}
-                        </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div className="tabular" style={{ fontWeight: 600, fontSize: '0.82rem' }}>
+                        {formatPercent(pos.weight * 100)}
                       </div>
+                      {pos.opportunity.priceChange24h != null && (
+                        <div className={`text-xs tabular ${getSignedClass(pos.opportunity.priceChange24h)}`}>
+                          {formatPercent(pos.opportunity.priceChange24h)}
+                        </div>
+                      )}
                     </div>
-                    <div className="mini-metrics">
-                      <span>{formatPercent(rebalance.previousWeight * 100)}</span>
-                      <strong className={getSignedClass(rebalance.delta)}>
-                        {formatPercent(rebalance.delta * 100)}
-                      </strong>
-                      <span>{formatPercent(rebalance.currentWeight * 100)}</span>
+                    <div className="weight-bar" style={{ width: 48 }}>
+                      <div
+                        className="weight-bar-fill"
+                        style={{ width: `${Math.min(pos.weight * 100, 100)}%` }}
+                      />
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="muted">Only one portfolio snapshot exists so far.</div>
+              <div className="muted text-sm">No positions.</div>
             )}
           </div>
 
-          <div className="panel">
-            <div className="section-header">
-              <h2 className="section-title">Member reviews</h2>
-              <span className="muted">{reviewState.total} total review(s)</span>
+          {/* Signal architecture */}
+          <div className="card">
+            <div className="card-header">
+              <h2 style={{ fontSize: '0.95rem' }}>Signal Architecture</h2>
+              <span className="muted text-xs">Model bias</span>
             </div>
-            {reviewState.reviews.length ? (
-              <div className="list">
-                {reviewState.reviews.map((review) => (
-                  <div key={review.id} className="signal-item">
-                    <div className="mini-metrics">
-                      <strong>{review.authorName}</strong>
-                      <span>{formatDateTime(review.createdAt)}</span>
+            <div className="signal-list">
+              {manager.signalMix.map((sig, i) => (
+                <div key={i} className="signal-item">
+                  <span style={{ width: 100, fontSize: '0.78rem', flexShrink: 0 }}>{sig.name}</span>
+                  <div className="signal-bar">
+                    <div
+                      className="signal-bar-fill"
+                      style={{
+                        width: `${Math.min(sig.weight * 100, 100)}%`,
+                        background: `var(--accent)`,
+                      }}
+                    />
+                  </div>
+                  <span className="tabular text-xs" style={{ width: 36, textAlign: 'right' }}>
+                    {(sig.weight * 100).toFixed(0)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Rebalance history */}
+          <div className="card">
+            <div className="card-header">
+              <h2 style={{ fontSize: '0.95rem' }}>Rebalance History</h2>
+              <span className="muted text-xs">Recent changes</span>
+            </div>
+            {rebalances.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {rebalances.slice(0, 8).map((rb) => (
+                  <div key={rb.opportunityId} className="position-row" style={{ padding: '6px 10px' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="truncate" style={{ fontWeight: 600, fontSize: '0.82rem' }}>
+                        {rb.opportunityTitle}
+                      </div>
+                      <span className="muted text-xs">
+                        {rb.delta > 0 ? 'Added risk' : rb.delta < 0 ? 'Trimmed risk' : 'No change'}
+                      </span>
                     </div>
-                    <div className="signal-name">Rating {review.rating}/5</div>
-                    <div className="muted">{review.comment}</div>
+                    <div className="flex items-center gap-2 text-xs tabular">
+                      <span className="muted">{formatPercent(rb.previousWeight * 100)}</span>
+                      <span className={getSignedClass(rb.delta)} style={{ fontWeight: 600 }}>
+                        {rb.delta > 0 ? '+' : ''}{formatPercent(rb.delta * 100)}
+                      </span>
+                      <span>{formatPercent(rb.currentWeight * 100)}</span>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="muted">No reviews yet.</div>
+              <div className="muted text-sm">Only one snapshot exists so far.</div>
             )}
           </div>
 
-          <div className="panel">
-            <h2 className="section-title">Submit a review</h2>
-            <p className="muted">
-              This writes directly into the live Nest API review endpoint for tomorrow&apos;s
-              debugging.
-            </p>
-            <ReviewForm managerSlug={manager.slug} />
+          {/* Reviews */}
+          <div className="card">
+            <div className="card-header">
+              <h2 style={{ fontSize: '0.95rem' }}>Reviews</h2>
+              <span className="muted text-xs">{reviewState.total} total</span>
+            </div>
+            {reviewState.reviews.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {reviewState.reviews.map((rv) => (
+                  <div key={rv.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{rv.authorName}</span>
+                      <span className="text-xs muted">{formatDateTime(rv.createdAt)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="badge badge-accent">Rating {rv.rating}/5</span>
+                    </div>
+                    {rv.comment && <p className="muted text-sm">{rv.comment}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="muted text-sm">No reviews yet.</div>
+            )}
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
-}
-
-function getChartLabels(series: ManagerDetail['performanceSeries']): [string, string] {
-  if (!series.length) {
-    return ['Start', 'Now'];
-  }
-
-  return [
-    formatShortDate(series[0].pointAt),
-    formatShortDate(series[series.length - 1].pointAt),
-  ];
-}
-
-function getValueLabels(series: ManagerDetail['performanceSeries']): [string, string] {
-  if (!series.length) {
-    return ['--', '--'];
-  }
-
-  const navValues = series.map((point) => point.nav);
-  return [formatMoney(Math.max(...navValues)), formatMoney(Math.min(...navValues))];
-}
-
-function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(value));
 }

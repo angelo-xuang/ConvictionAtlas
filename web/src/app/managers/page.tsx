@@ -1,336 +1,241 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AssetAvatar } from '../../components/asset-avatar';
-import { PositionStack } from '../../components/position-stack';
-import { SignalBars } from '../../components/signal-bars';
-import { Sparkline } from '../../components/sparkline';
+import { MiniLine } from '../../components/Chart';
 import {
   fetchPageData,
   formatMoney,
-  formatPercent,
   formatReturn,
+  formatPercent,
   getSignedClass,
+  getDirectionClass,
 } from '../../lib/api';
-import { API_DOCS_URL } from '../../lib/runtime-config';
 import type {
-  ManagerLeaderboardEntry,
   ManagerSummary,
+  ManagerLeaderboardEntry,
 } from '../../lib/types';
-
-export default function ManagersPage() {
-  const [managers, setManagers] = useState<ManagerSummary[]>([]);
-  const [leaderboard, setLeaderboard] = useState<ManagerLeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.all([
-      fetchPageData<ManagerSummary[]>('/managers'),
-      fetchPageData<ManagerLeaderboardEntry[]>('/leaderboard/managers'),
-    ])
-      .then(([managersData, leaderboardData]) => {
-        setManagers(managersData ?? []);
-        setLeaderboard(leaderboardData ?? []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="loading">Loading...</div>;
-
-  const managerRows = managers ?? [];
-  const leadManager = managerRows[0] ?? null;
-
-  return (
-    <div className="page-stack">
-      <section className="hero hero-compact manager-hero">
-        <div>
-          <div className="breadcrumbs">
-            <Link href="/">Home</Link>
-            <span>/</span>
-            <span>Managers</span>
-          </div>
-          <span className="hero-kicker">Manager layer</span>
-          <h1 className="detail-headline">
-            Six manager desks reading one live token tape and crypto prediction surface.
-          </h1>
-          <p className="detail-copy">
-            Each desk now carries its own curve, book map, signal bias, and packaging.
-            The card is the current state of the strategy, not placeholder copy.
-          </p>
-          <div className="cta-row">
-            <Link href="/leaderboard" className="button-link primary">
-              Open leaderboard
-            </Link>
-            <a href={API_DOCS_URL} target="_blank" rel="noreferrer" className="button-link">
-              API docs
-            </a>
-          </div>
-        </div>
-
-        <div className="hero-side-stack">
-          <div className="hero-spotlight">
-            <div className="mini-metrics">
-              <span className="eyebrow">Desk snapshot</span>
-              <span className="chip">90d backtest</span>
-            </div>
-            <div className="hero-spotlight-value">
-              {leadManager ? formatMoney(leadManager.latestNav) : '--'}
-            </div>
-            <div className="mini-metrics">
-              <span>Lead desk NAV</span>
-              <strong className={getSignedClass(leadManager?.cumulativeReturn)}>
-                {leadManager ? formatReturn(leadManager.cumulativeReturn) : '--'}
-              </strong>
-            </div>
-            <Sparkline
-              className="hero-curve"
-              points={leadManager?.performanceSeries.map((point) => point.nav) ?? []}
-              height={96}
-              tone={
-                (leadManager?.cumulativeReturn ?? 0) > 0
-                  ? 'positive'
-                  : (leadManager?.cumulativeReturn ?? 0) < 0
-                    ? 'negative'
-                    : 'neutral'
-              }
-              dateLabels={leadManager?.performanceSeries.map((point) => formatShortDate(point.pointAt))}
-              formatValue={(v) => formatMoney(v)}
-            />
-            <div className="hero-spotlight-grid">
-              <div>
-                <div className="eyebrow">Managers</div>
-                <strong>{managerRows.length}</strong>
-              </div>
-              <div>
-                <div className="eyebrow">Gross exposure</div>
-                <strong>
-                  {leadManager ? formatPercent(leadManager.grossExposure * 100) : '--'}
-                </strong>
-              </div>
-              <div>
-                <div className="eyebrow">Hit rate</div>
-                <strong>{leadManager ? formatPercent(leadManager.hitRate * 100) : '--'}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {!managerRows.length ? (
-        <div className="error-card">
-          Manager data is not available yet. Start the API, run `npm run pipeline`, and
-          refresh this page.
-        </div>
-      ) : (
-        <section className="section">
-          <div className="section-header">
-            <h2 className="section-title">Live manager desks</h2>
-            <span className="muted">Real-data backtest curve, current exposure, signal mix, and subscription layer</span>
-          </div>
-          <div className="manager-grid">
-            {managerRows.map((manager, index) => {
-              const leadPosition = manager.topPositions[0];
-              const chartLabels = getChartLabels(manager.performanceSeries);
-              const valueLabels = getValueLabels(manager.performanceSeries);
-              return (
-                <Link
-                  key={manager.slug}
-                  href={`/managers/${manager.slug}`}
-                  className="manager-card"
-                >
-                  <div className="manager-card-top">
-                    <div className="manager-card-title">
-                      <AssetAvatar
-                        title={manager.name}
-                        symbol={manager.name}
-                        sourceKind={manager.style}
-                        size="lg"
-                      />
-                      <div>
-                        <div className="mini-metrics manager-rank-row">
-                          <span className="eyebrow">Desk {index + 1}</span>
-                          <span className="chip">{manager.riskProfile}</span>
-                        </div>
-                        <h3>{manager.name}</h3>
-                        <p className="muted">{manager.description}</p>
-                      </div>
-                    </div>
-                    <div className={`manager-return ${getSignedClass(manager.cumulativeReturn)}`}>
-                      {formatReturn(manager.cumulativeReturn)}
-                    </div>
-                  </div>
-
-                  <div className="manager-chart-shell">
-                    <Sparkline
-                      className="manager-card-sparkline"
-                      points={manager.performanceSeries.map((point) => point.nav)}
-                      height={132}
-                      area={false}
-                      showAxes
-                      xLabels={chartLabels}
-                      yLabels={valueLabels}
-                      dateLabels={manager.performanceSeries.map((point) => formatShortDate(point.pointAt))}
-                      formatValue={(v) => formatMoney(v)}
-                      tone={
-                        manager.cumulativeReturn > 0
-                          ? 'positive'
-                          : manager.cumulativeReturn < 0
-                            ? 'negative'
-                            : 'neutral'
-                      }
-                    />
-                  </div>
-
-                  <div className="manager-metric-grid">
-                    <div className="manager-metric-tile">
-                      <span className="eyebrow">NAV</span>
-                      <strong>{formatMoney(manager.latestNav)}</strong>
-                    </div>
-                    <div className="manager-metric-tile">
-                      <span className="eyebrow">Gross</span>
-                      <strong>{formatPercent(manager.grossExposure * 100)}</strong>
-                    </div>
-                    <div className="manager-metric-tile">
-                      <span className="eyebrow">Cash</span>
-                      <strong>{formatPercent(manager.cashWeight * 100)}</strong>
-                    </div>
-                    <div className="manager-metric-tile">
-                      <span className="eyebrow">Hit rate</span>
-                      <strong>{formatPercent(manager.hitRate * 100)}</strong>
-                    </div>
-                  </div>
-
-                  <div className="manager-lead">
-                    <div className="mini-metrics">
-                      <span className="eyebrow">Lead position</span>
-                      <span className={getSignedClass(leadPosition?.priceChange24h)}>
-                        {formatPercent(leadPosition?.priceChange24h)}
-                      </span>
-                    </div>
-                    {leadPosition ? (
-                      <div className="manager-lead-row">
-                        <AssetAvatar
-                          title={leadPosition.title}
-                          imageUrl={leadPosition.imageUrl}
-                          symbol={leadPosition.symbol}
-                          sourceKind={leadPosition.sourceKind}
-                        />
-                        <div>
-                          <div className="manager-lead-title">{leadPosition.title}</div>
-                          <div className="muted">
-                            {(leadPosition.weight * 100).toFixed(1)}% book weight
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="muted">No active long yet.</div>
-                    )}
-                  </div>
-
-                  <PositionStack positions={manager.topPositions.slice(0, 4)} />
-
-                  <div className="manager-signal-block">
-                    <div className="mini-metrics">
-                      <span className="eyebrow">Signal mix</span>
-                      <span className="muted">Model bias</span>
-                    </div>
-                    <SignalBars items={manager.signalMix.slice(0, 4)} />
-                  </div>
-
-                  <div className="manager-card-footer">
-                    <div>
-                      <div className="eyebrow">Entry pricing</div>
-                      <strong>{manager.pricingSummary ?? 'TBD'}</strong>
-                    </div>
-                    <span className="manager-card-cta">Open manager</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {leaderboard?.length ? (
-        <section className="section">
-          <div className="section-header">
-            <h2 className="section-title">Leaderboard snapshot</h2>
-            <Link href="/leaderboard" className="muted">
-              Full leaderboard
-            </Link>
-          </div>
-          <div className="table-card table-card-rich">
-            <div className="leaderboard-grid leaderboard-head">
-              <span>Manager</span>
-              <span>Curve</span>
-              <span>NAV</span>
-              <span>3m</span>
-              <span>Gross</span>
-              <span>Sharpe</span>
-              <span>Hit rate</span>
-            </div>
-            {leaderboard.map((entry) => (
-              <Link key={entry.slug} href={`/managers/${entry.slug}`} className="leaderboard-grid">
-                <strong>{entry.name}</strong>
-                <Sparkline
-                  className="leaderboard-sparkline"
-                  points={entry.performanceSeries.map((point) => point.nav)}
-                  height={48}
-                  area={false}
-                  tone={
-                    entry.cumulativeReturn > 0
-                      ? 'positive'
-                      : entry.cumulativeReturn < 0
-                        ? 'negative'
-                        : 'neutral'
-                  }
-                  dateLabels={entry.performanceSeries.map((point) => formatShortDate(point.pointAt))}
-                  formatValue={(v) => formatMoney(v)}
-                />
-                <span>{formatMoney(entry.nav)}</span>
-                <span className={getSignedClass(entry.cumulativeReturn)}>
-                  {formatReturn(entry.cumulativeReturn)}
-                </span>
-                <span>{formatPercent(entry.grossExposure * 100)}</span>
-                <span>{entry.sharpe.toFixed(2)}</span>
-                <span>{formatPercent(entry.hitRate * 100)}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
-    </div>
-  );
-}
-
-function getChartLabels(
-  series: ManagerSummary['performanceSeries'],
-): [string, string] {
-  if (!series.length) {
-    return ['Start', 'Now'];
-  }
-
-  return [
-    formatShortDate(series[0].pointAt),
-    formatShortDate(series[series.length - 1].pointAt),
-  ];
-}
-
-function getValueLabels(
-  series: ManagerSummary['performanceSeries'],
-): [string, string] {
-  if (!series.length) {
-    return ['--', '--'];
-  }
-
-  const navValues = series.map((point) => point.nav);
-  return [formatMoney(Math.max(...navValues)), formatMoney(Math.min(...navValues))];
-}
 
 function formatShortDate(value: string) {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
   }).format(new Date(value));
+}
+
+export default function ManagersPage() {
+  const [managers, setManagers] = useState<ManagerSummary[]>([]);
+  const [leaderboard, setLeaderboard] = useState<ManagerLeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      fetchPageData<ManagerSummary[]>('/managers'),
+      fetchPageData<ManagerLeaderboardEntry[]>('/leaderboard/managers'),
+    ])
+      .then(([m, lb]) => {
+        setManagers(m ?? []);
+        setLeaderboard(lb ?? []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="shell">
+        <div style={{ padding: '120px 0', textAlign: 'center' }}>
+          <div className="stat-value" style={{ color: 'var(--text-muted)' }}>Loading manager desks...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="shell">
+        <div className="error-card mt-6">
+          Manager data is not available yet. Start the API, run the pipeline, and refresh.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="shell">
+      {/* Page header */}
+      <div className="page-header">
+        <div>
+          <div className="breadcrumb">
+            <Link href="/">Home</Link>
+            <span>/</span>
+            <span style={{ color: 'var(--text)' }}>Managers</span>
+          </div>
+          <h1>AI Managers</h1>
+          <p className="muted" style={{ marginTop: 6, maxWidth: 560 }}>
+            Six autonomous desks, each reading one live token tape and crypto prediction surface. Each desk carries its own curve, book map, signal bias, and packaging.
+          </p>
+        </div>
+        <Link href="/leaderboard" className="btn btn-primary">
+          Leaderboard
+        </Link>
+      </div>
+
+      {/* Manager grid */}
+      {managers.length === 0 ? (
+        <div className="error-card">
+          No manager data available. Run the pipeline first.
+        </div>
+      ) : (
+        <div className="manager-grid">
+          {managers.map((mgr) => (
+            <ManagerCard key={mgr.slug} manager={mgr} />
+          ))}
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      {leaderboard.length > 0 && (
+        <div className="section">
+          <div className="section-header">
+            <h2>Leaderboard</h2>
+            <Link href="/leaderboard" className="muted text-sm">Full leaderboard &rarr;</Link>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Manager</th>
+                  <th style={{ width: 140 }}>Curve</th>
+                  <th>NAV</th>
+                  <th>Cum. Return</th>
+                  <th>Gross</th>
+                  <th>Sharpe</th>
+                  <th>Hit Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboard.map((entry) => (
+                  <tr key={entry.slug}>
+                    <td>
+                      <Link href={`/managers/${entry.slug}`} style={{ fontWeight: 600 }}>
+                        {entry.name}
+                      </Link>
+                    </td>
+                    <td>
+                      <MiniLine
+                        points={entry.performanceSeries.map((p) => p.nav)}
+                        height={36}
+                        tone={
+                          entry.cumulativeReturn > 0 ? 'positive'
+                            : entry.cumulativeReturn < 0 ? 'negative'
+                              : 'neutral'
+                        }
+                      />
+                    </td>
+                    <td className="tabular">{formatMoney(entry.nav)}</td>
+                    <td>
+                      <span className={`${getSignedClass(entry.cumulativeReturn)} tabular`}>
+                        {formatReturn(entry.cumulativeReturn)}
+                      </span>
+                    </td>
+                    <td className="tabular">{formatPercent(entry.grossExposure * 100)}</td>
+                    <td className="tabular">{entry.sharpe.toFixed(2)}</td>
+                    <td className="tabular">{formatPercent(entry.hitRate * 100)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Manager card sub-component ─── */
+
+function ManagerCard({ manager }: { manager: ManagerSummary }) {
+  const navPoints = manager.performanceSeries.map((p) => p.nav);
+  const tone: 'positive' | 'negative' | 'neutral' =
+    manager.cumulativeReturn > 0 ? 'positive'
+      : manager.cumulativeReturn < 0 ? 'negative'
+        : 'neutral';
+
+  const topPos = manager.topPositions.slice(0, 2);
+
+  return (
+    <Link href={`/managers/${manager.slug}`} className="manager-card" style={{ display: 'block' }}>
+      {/* Header */}
+      <div className="manager-card-header">
+        <div
+          className="avatar avatar-lg"
+          style={{ background: `linear-gradient(135deg, var(--accent), #6366f1)` }}
+        >
+          {manager.name.charAt(0)}
+        </div>
+        <div className="info">
+          <h3>{manager.name}</h3>
+          <span className="badge badge-accent" style={{ marginTop: 4 }}>{manager.style}</span>
+        </div>
+      </div>
+
+      {/* Mini chart */}
+      <div style={{ margin: '12px 0' }}>
+        <MiniLine points={navPoints} height={72} tone={tone} />
+      </div>
+
+      {/* Metric tiles */}
+      <div className="manager-card-metrics">
+        <div className="metric-item">
+          <div className="value tabular">{formatMoney(manager.latestNav)}</div>
+          <div className="label">NAV</div>
+        </div>
+        <div className="metric-item">
+          <div className={`value tabular ${getSignedClass(manager.cumulativeReturn)}`}>
+            {formatReturn(manager.cumulativeReturn)}
+          </div>
+          <div className="label">Cum. Return</div>
+        </div>
+        <div className="metric-item">
+          <div className="value tabular">{formatReturn(manager.drawdown)}</div>
+          <div className="label">Drawdown</div>
+        </div>
+        <div className="metric-item">
+          <div className="value tabular">{manager.sharpe.toFixed(2)}</div>
+          <div className="label">Sharpe</div>
+        </div>
+      </div>
+
+      {/* Top positions preview */}
+      {topPos.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div className="stat-label" style={{ marginBottom: 6 }}>Top Positions</div>
+          <div className="positions-list">
+            {topPos.map((pos) => (
+              <div key={pos.id} className="position-row">
+                <div className="avatar avatar-sm">{pos.title.charAt(0)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="truncate" style={{ fontWeight: 600, fontSize: '0.82rem' }}>{pos.title}</div>
+                </div>
+                <div className="tabular" style={{ fontSize: '0.78rem', fontWeight: 600, width: 48, textAlign: 'right' }}>
+                  {(pos.weight * 100).toFixed(1)}%
+                </div>
+                <div className="weight-bar" style={{ width: 60 }}>
+                  <div
+                    className="weight-bar-fill"
+                    style={{ width: `${Math.min(pos.weight * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Link>
+  );
 }
