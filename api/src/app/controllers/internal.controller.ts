@@ -80,7 +80,12 @@ export class InternalController {
   }
 
   @Post('backtest/run')
-  runBacktest(@Body() payload?: { days?: number }) {
-    return this.backtestService.runBacktest(payload?.days ?? 180);
+  async runBacktest(@Body() payload?: { days?: number }) {
+    try {
+      return await this.backtestService.runBacktest(payload?.days ?? 180);
+    } catch (err) {
+      console.error('[Backtest Error]', err);
+      throw err;
+    }
   }
 }
