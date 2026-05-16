@@ -1,90 +1,68 @@
-import Link from 'next/link';
-import HeroPerformanceChart from '../components/hero-performance-chart';
-import { API_DOCS_URL } from '../lib/runtime-config';
+import Link from "next/link";
+import HeroPerformanceChart from "../components/hero-performance-chart";
+import { API_DOCS_URL } from "../lib/runtime-config";
 
 const landingStats = [
   {
-    label: 'Autonomous desks',
-    value: '6',
-    detail: 'Distinct manager philosophies with separate conviction engines.',
+    label: "AI Managers",
+    value: "6",
+    detail: "Each with a distinct investment style, risk profile, and conviction engine.",
   },
   {
-    label: 'Market surfaces',
-    value: '2',
-    detail: 'Spot token flow and Polymarket probability dislocations in one tape.',
+    label: "Data Sources",
+    value: "2+",
+    detail: "Live crypto prices from CoinGecko and prediction markets from Polymarket.",
   },
   {
-    label: 'Daily loop',
-    value: '9-step',
-    detail: 'Ingestion, signals, decisions, rebalancing, snapshots, and memos.',
+    label: "Assets Tracked",
+    value: "12+",
+    detail: "Top tokens by market cap plus active crypto prediction markets.",
   },
 ];
 
 const landingInfoCards = [
   ...landingStats,
   {
-    label: 'Coverage',
-    title: 'Signals, books, trades, memos',
-    detail: 'Every surface ladders back to the same pipeline and database state.',
+    label: "Signals",
+    title: "11 quantitative signals per asset",
+    detail:
+      "Momentum, trend, volume, news sentiment, catalyst proximity, and more.",
   },
   {
-    label: 'Use case',
-    title: 'From watchlist to thesis',
+    label: "Transparency",
+    title: "Full portfolio visibility",
     detail:
-      'Managers, opportunities, rankings, and docs now feel like one product family.',
+      "See every position, weight, conviction score, and rebalance in real time.",
   },
 ];
 
 const landingSurfaces = [
   {
-    href: '/managers',
-    index: '01',
-    title: 'Manager layer',
+    href: "/managers",
+    index: "01",
+    title: "AI Manager Portfolios",
     description:
-      'See six desks expressed as live products with their own signal bias, book shape, drawdown profile, and pricing surface.',
-    eyebrow: 'Desks',
-    meta: 'Curves · exposures · memos',
+      "Six specialized AI managers with live portfolios, performance curves, and investment memos.",
+    eyebrow: "Portfolios",
+    meta: "NAV · Performance · Positions",
   },
   {
-    href: '/opportunities',
-    index: '02',
-    title: 'Opportunity tape',
+    href: "/opportunities",
+    index: "02",
+    title: "Market Opportunities",
     description:
-      'Scan the normalized market inventory flowing in from CoinGecko and Polymarket with strongest-signal context attached.',
-    eyebrow: 'Tape',
-    meta: 'Tokens · markets · catalysts',
+      "All tracked assets with signal scores, price action, and which managers are bullish or bearish.",
+    eyebrow: "Markets",
+    meta: "Tokens · Prediction Markets",
   },
   {
-    href: '/leaderboard',
-    index: '03',
-    title: 'Ranking surface',
+    href: "/leaderboard",
+    index: "03",
+    title: "Performance Rankings",
     description:
-      'Compare which managers and which opportunities are carrying conviction right now without hopping across disconnected screens.',
-    eyebrow: 'Ranks',
-    meta: 'NAV · Sharpe · conviction',
-  },
-];
-
-const pipelineSteps = [
-  {
-    index: '01',
-    title: 'Ingest',
-    description: 'Pull token, prediction market, and news inputs into one shared opportunity store.',
-  },
-  {
-    index: '02',
-    title: 'Score',
-    description: 'Recompute multi-factor signals so each opportunity gets a fresh quantitative state vector.',
-  },
-  {
-    index: '03',
-    title: 'Decide',
-    description: 'Let each manager translate those signals into conviction, sizing, and direction.',
-  },
-  {
-    index: '04',
-    title: 'Publish',
-    description: 'Rebalance books, snapshot NAV, and expose the whole cycle through one interface.',
+      "Compare managers by NAV, Sharpe ratio, and hit rate. See which opportunities carry the most conviction.",
+    eyebrow: "Rankings",
+    meta: "Sharpe · Returns · Conviction",
   },
 ];
 
@@ -94,40 +72,44 @@ export default function Index() {
       <section className="hero landing-hero">
         <div className="landing-copy-column">
           <div className="tag-row">
-            <span className="hero-kicker">Autonomous fund stack</span>
-            <span className="chip">Crypto macro to market microstructure</span>
+            <span className="hero-kicker">AI-Powered Investment Intelligence</span>
+            <span className="chip">Crypto tokens and prediction markets</span>
           </div>
 
           <div className="landing-copy-block">
             <h1 className="detail-headline landing-headline">
-              One operating surface for six crypto managers, live opportunity flow, and
-              AI research memos.
+              Six AI managers analyzing crypto markets and managing portfolios in real
+              time.
             </h1>
             <p className="detail-copy landing-copy-lead">
-              Conviction Atlas turns ingestion, signal recompute, manager scoring,
-              rebalancing, and memo generation into a single dark-glass interface that
-              feels like one desk instead of five disconnected tools.
+              Conviction Atlas runs autonomous investment managers that ingest market data,
+              compute signals, make decisions, and publish their reasoning — all visible
+              through a single interface.
             </p>
           </div>
 
           <div className="cta-row">
             <Link href="/managers" className="button-link primary">
-              Open managers
+              View managers
             </Link>
             <Link href="/opportunities" className="button-link">
-              Browse opportunities
+              Browse markets
             </Link>
-            <a href={API_DOCS_URL} target="_blank" rel="noreferrer" className="button-link">
+            <a
+              href={API_DOCS_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="button-link"
+            >
               API docs
             </a>
           </div>
-
         </div>
 
         <div className="landing-scene-panel">
           <div className="mini-metrics">
             <span className="eyebrow">Live performance</span>
-            <span className="chip">6 desks · 90d backtest</span>
+            <span className="chip">6 managers · 90d backtest</span>
           </div>
 
           <div className="landing-chart-frame">
@@ -139,7 +121,7 @@ export default function Index() {
           {landingInfoCards.map((item) => (
             <div key={item.label} className="panel landing-info-card">
               <div className="eyebrow">{item.label}</div>
-              {'value' in item ? (
+              {"value" in item ? (
                 <div className="stat-value">{item.value}</div>
               ) : (
                 <strong className="landing-info-title">{item.title}</strong>
@@ -152,15 +134,19 @@ export default function Index() {
 
       <section className="section">
         <div className="section-header">
-          <h2 className="section-title">Explore the surface</h2>
+          <h2 className="section-title">Explore</h2>
           <span className="muted">
-            Three entry points, one visual system, one operating model.
+            Three views into the same data — managers, markets, and rankings.
           </span>
         </div>
 
         <div className="landing-feature-grid">
           {landingSurfaces.map((item) => (
-            <Link key={item.href} href={item.href} className="panel landing-feature-card">
+            <Link
+              key={item.href}
+              href={item.href}
+              className="panel landing-feature-card"
+            >
               <div className="landing-feature-top">
                 <div>
                   <div className="eyebrow">{item.eyebrow}</div>
@@ -174,26 +160,6 @@ export default function Index() {
                 <span className="landing-feature-arrow">Open</span>
               </div>
             </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="section-header">
-          <h2 className="section-title">Pipeline loop</h2>
-          <span className="muted">
-            The interface, data layer, and portfolio engine now read as one continuous
-            flow.
-          </span>
-        </div>
-
-        <div className="landing-pipeline-grid">
-          {pipelineSteps.map((step) => (
-            <div key={step.index} className="panel landing-step-card">
-              <div className="landing-step-index">{step.index}</div>
-              <h3>{step.title}</h3>
-              <p className="detail-copy">{step.description}</p>
-            </div>
           ))}
         </div>
       </section>
