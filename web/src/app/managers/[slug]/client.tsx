@@ -9,6 +9,7 @@ import {
   formatReturn,
   formatPercent,
   formatDateTime,
+  formatDirection,
   getSignedClass,
   getDirectionClass,
 } from '../../../lib/api';
@@ -21,9 +22,9 @@ import type {
 } from '../../../lib/types';
 
 function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
   }).format(new Date(value));
 }
 
@@ -191,7 +192,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                   <div key={d.id} className="decision-card">
                     <div className="flex items-center justify-between mb-2">
                       <span className={`badge ${getDirectionClass(d.direction)}`}>
-                        {d.direction}
+                        {formatDirection(d.direction)}
                       </span>
                       <span className="text-xs tabular muted">
                         {formatPercent(d.targetWeight * 100)} 权重

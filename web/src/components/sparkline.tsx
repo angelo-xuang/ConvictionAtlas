@@ -85,7 +85,7 @@ export function Sparkline({
       : tone === 'negative'
         ? 'sparkline-negative'
         : 'sparkline-neutral';
-  const resolvedXLabels = xLabels ?? ['Start', 'Now'];
+  const resolvedXLabels = xLabels ?? ['起始', '当前'];
   const resolvedYLabels = yLabels ?? [
     maxValue.toFixed(2),
     minValue.toFixed(2),

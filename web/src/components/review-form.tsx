@@ -26,14 +26,14 @@ export function ReviewForm({ managerSlug }: { managerSlug: string }) {
         comment,
       });
       setTone('success');
-      setMessage('Review submitted.');
+      setMessage('评价已提交。');
       setAuthorName('');
       setRating(5);
       setComment('');
       router.refresh();
     } catch (error) {
       setTone('error');
-      setMessage(error instanceof Error ? error.message : 'Review submission failed.');
+      setMessage(error instanceof Error ? error.message : '提交失败，请重试。');
     } finally {
       setIsSubmitting(false);
     }
@@ -44,7 +44,7 @@ export function ReviewForm({ managerSlug }: { managerSlug: string }) {
       <div className="form-row">
         <input
           className="input"
-          placeholder="Name"
+          placeholder="你的名字"
           value={authorName}
           onChange={(event) => setAuthorName(event.target.value)}
         />
@@ -55,7 +55,7 @@ export function ReviewForm({ managerSlug }: { managerSlug: string }) {
         >
           {[5, 4, 3, 2, 1].map((value) => (
             <option key={value} value={value}>
-              {value} star{value === 1 ? '' : 's'}
+              {value} 星
             </option>
           ))}
         </select>
@@ -64,12 +64,12 @@ export function ReviewForm({ managerSlug }: { managerSlug: string }) {
         className="textarea"
         value={comment}
         onChange={(event) => setComment(event.target.value)}
-        placeholder="What stood out in this manager's latest positioning?"
+        placeholder="你对这个经理的最新持仓有什么看法？"
         rows={5}
         required
       />
       <button type="submit" className="button-link primary" disabled={isSubmitting}>
-        {isSubmitting ? 'Submitting...' : 'Submit review'}
+        {isSubmitting ? '提交中...' : '提交评价'}
       </button>
       {message ? <div className={`feedback ${tone}`}>{message}</div> : null}
     </form>

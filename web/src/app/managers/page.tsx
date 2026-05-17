@@ -17,9 +17,9 @@ import type {
 } from '../../lib/types';
 
 function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
   }).format(new Date(value));
 }
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { fetchPageData, formatMoney, formatPercent, formatCompact, formatDate, formatSignalName, getDirectionClass } from '../../../lib/api';
+import { fetchPageData, formatMoney, formatPercent, formatCompact, formatDate, formatSignalName, formatDirection, getDirectionClass } from '../../../lib/api';
 import type { OpportunityDetail, ManagerDecision, Signal, NewsItem, OpportunityHistoryPoint } from '../../../lib/types';
 import { PerfLine } from '../../../components/Chart';
 
@@ -99,7 +99,7 @@ export default function OpportunityDetailClient() {
                     </div>
                     <div className="flex gap-2 text-xs muted">
                       <span>置信度: {(s.confidence * 100).toFixed(0)}%</span>
-                      <span className={`badge ${getDirectionClass(s.direction)}`}>{s.direction}</span>
+                      <span className={`badge ${getDirectionClass(s.direction)}`}>{formatDirection(s.direction)}</span>
                     </div>
                   </div>
                 ))}
@@ -115,7 +115,7 @@ export default function OpportunityDetailClient() {
                   <div key={d.id} className="decision-card">
                     <div className="flex justify-between items-center">
                       <strong className="text-sm">{d.manager.name}</strong>
-                      <span className={`badge ${getDirectionClass(d.direction)}`}>{d.direction}</span>
+                      <span className={`badge ${getDirectionClass(d.direction)}`}>{formatDirection(d.direction)}</span>
                     </div>
                     <div className="text-xs muted mt-2">信念: {d.convictionScore.toFixed(2)} | 目标: {(d.targetWeight * 100).toFixed(1)}%</div>
                   </div>

@@ -32,14 +32,14 @@ export function MemoUnlockButton({ memoId }: { memoId: string }) {
       const info = await fetchApi<PaymentInfo>(`/memos/${memoId}/payment-info`);
       setPaymentInfo(info);
     } catch {
-      setMessage('Failed to load payment info. Is the API running?');
+      setMessage('无法加载支付信息，请确认 API 正在运行。');
       setStep('error');
     }
   }
 
   async function handleSubmitTx() {
     if (!txHash.trim()) {
-      setMessage('Please enter your transaction hash.');
+      setMessage('请输入交易哈希。');
       return;
     }
     setStep('submitting-tx');
@@ -51,12 +51,12 @@ export function MemoUnlockButton({ memoId }: { memoId: string }) {
         txHash: txHash.trim(),
       });
       setIsSuccess(response.success ?? false);
-      setMessage(response.message ?? 'Done.');
+      setMessage(response.message ?? '完成。');
       if (response.success) setStep('done');
       else setStep('error');
     } catch (error) {
       setIsSuccess(false);
-      setMessage(error instanceof Error ? error.message : 'Verification failed.');
+      setMessage(error instanceof Error ? error.message : '验证失败。');
       setStep('error');
     }
   }
@@ -78,7 +78,7 @@ export function MemoUnlockButton({ memoId }: { memoId: string }) {
     <div className="unlock-shell">
       {step === 'idle' && (
         <button type="button" className="button-link unlock-trigger" onClick={handleGetPaymentInfo}>
-          🔓 Unlock full memo via TRON USDT
+          🔓 通过 TRON USDT 解锁完整备忘录
         </button>
       )}
 
@@ -90,35 +90,35 @@ export function MemoUnlockButton({ memoId }: { memoId: string }) {
           </div>
 
           <div className="unlock-wallet-row">
-            <span className="unlock-label">Send to:</span>
+            <span className="unlock-label">发送至:</span>
             <code className="unlock-address">{paymentInfo.wallet}</code>
             <button
               type="button"
               className="unlock-copy"
               onClick={() => copyToClipboard(paymentInfo.wallet)}
-              title="Copy address"
+              title="复制地址"
             >
               📋
             </button>
           </div>
 
           <div className="unlock-wallet-row">
-            <span className="unlock-label">Token:</span>
+            <span className="unlock-label">代币:</span>
             <span className="unlock-value">{paymentInfo.token}</span>
           </div>
 
           <div className="unlock-wallet-row">
-            <span className="unlock-label">Memo ref:</span>
+            <span className="unlock-label">备注:</span>
             <code className="unlock-address">{paymentInfo.memo}</code>
           </div>
 
           <div className="unlock-links">
             <a href={paymentInfo.explorerUrl} target="_blank" rel="noreferrer" className="unlock-link">
-              View on Explorer ↗
+              在浏览器中查看 ↗
             </a>
             {paymentInfo.faucetUrl ? (
               <a href={paymentInfo.faucetUrl} target="_blank" rel="noreferrer" className="unlock-link">
-                Get network funds ↗
+                获取测试币 ↗
               </a>
             ) : null}
           </div>
@@ -129,7 +129,7 @@ export function MemoUnlockButton({ memoId }: { memoId: string }) {
             <input
               type="text"
               className="unlock-tx-input"
-              placeholder="Paste your tx hash after sending…"
+              placeholder="发送后粘贴交易哈希..."
               value={txHash}
               onChange={(e) => setTxHash(e.target.value)}
               disabled={step === 'submitting-tx'}
@@ -140,7 +140,7 @@ export function MemoUnlockButton({ memoId }: { memoId: string }) {
               onClick={handleSubmitTx}
               disabled={step === 'submitting-tx' || !txHash.trim()}
             >
-              {step === 'submitting-tx' ? 'Verifying…' : 'Verify & Unlock'}
+              {step === 'submitting-tx' ? '验证中...' : '验证并解锁'}
             </button>
           </div>
 
@@ -153,7 +153,7 @@ export function MemoUnlockButton({ memoId }: { memoId: string }) {
       )}
 
       {step === 'showing-payment' && !paymentInfo && (
-        <div className="muted">Loading payment info…</div>
+        <div className="muted">正在加载支付信息...</div>
       )}
     </div>
   );

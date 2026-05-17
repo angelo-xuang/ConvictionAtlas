@@ -64,7 +64,7 @@ export function formatMoney(value: number | null | undefined) {
     return '--';
   }
 
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('zh-CN', {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: value >= 100 ? 0 : 2,
@@ -76,7 +76,7 @@ export function formatCompact(value: number | null | undefined) {
     return '--';
   }
 
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('zh-CN', {
     notation: 'compact',
     maximumFractionDigits: 2,
   }).format(value);
@@ -95,8 +95,10 @@ export function formatDate(value: string | Date | null | undefined) {
     return '--';
   }
 
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   }).format(new Date(value));
 }
 
@@ -105,14 +107,42 @@ export function formatDateTime(value: string | Date | null | undefined) {
     return '--';
   }
 
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(new Date(value));
 }
 
+const SIGNAL_LABELS: Record<string, string> = {
+  trend_regime: '趋势状态',
+  risk_flag: '风险标志',
+  opportunity_quality: '机会质量',
+  volume_spike: '成交量异动',
+  narrative_strength: '叙事强度',
+  news_heat: '新闻热度',
+  market_momentum: '市场动量',
+  catalyst_setup: '催化布局',
+  event_proximity: '事件临近',
+  probability_edge: '概率优势',
+  price_dislocation: '价格偏离',
+};
+
 export function formatSignalName(value: string) {
-  return value.replace(/_/g, ' ');
+  return SIGNAL_LABELS[value] || value.replace(/_/g, ' ');
+}
+
+const DIRECTION_LABELS: Record<string, string> = {
+  BULLISH: '看多',
+  BEARISH: '看空',
+  NEUTRAL: '中性',
+};
+
+export function formatDirection(direction: string | null | undefined): string {
+  if (!direction) return '--';
+  return DIRECTION_LABELS[direction] || direction;
 }
 
 export function getSignedClass(value: number | null | undefined) {
