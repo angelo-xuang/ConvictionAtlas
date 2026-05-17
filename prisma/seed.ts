@@ -87,88 +87,6 @@ const managers = [
     ],
   },
   {
-    slug: 'quant-manager',
-    name: 'Quant Manager',
-    description:
-      '用动量、成交量和价格偏离信号对流动性标的打分，保持规则至上的投资组合。',
-    style: '量化',
-    riskProfile: '系统型',
-    rebalanceCadence: '每日两次',
-    memoStyle: '规则化市场复盘',
-    universe: '流动性代币和价格发现中的预测市场',
-    pricingSummary: '¥129/月 量化推送',
-    metadata: JSON.stringify({
-      signalWeights: {
-        market_momentum: 0.26,
-        trend_regime: 0.22,
-        volume_spike: 0.16,
-        price_dislocation: 0.14,
-        opportunity_quality: 0.16,
-        probability_edge: 0.04,
-        event_proximity: 0.02,
-        risk_flag: -0.18,
-      },
-      thresholds: {
-        bullish: 0.14,
-        bearish: -0.12,
-      },
-      opportunityTypeBias: {
-        TOKEN: 0.12,
-        PREDICTION_MARKET: -0.22,
-      },
-    }),
-    pricingPlans: [
-      {
-        name: 'Quant Feed',
-        cadence: 'monthly',
-        amountUsd: 19,
-        description: '每日信号摘要和最新系统化投资组合。',
-      },
-    ],
-  },
-  {
-    slug: 'hybrid-manager',
-    name: 'Hybrid Manager',
-    description:
-      '融合市场结构、催化事件检测和主题分析，运行多元化的高信念投资组合。',
-    style: '混合',
-    riskProfile: '自适应',
-    rebalanceCadence: '每日',
-    memoStyle: '均衡投资组合报告',
-    universe: '代币、预测市场和跨市场催化篮子',
-    pricingSummary: '¥339/月 旗舰策略',
-    metadata: JSON.stringify({
-      signalWeights: {
-        market_momentum: 0.14,
-        trend_regime: 0.12,
-        narrative_strength: 0.14,
-        news_heat: 0.12,
-        opportunity_quality: 0.16,
-        event_proximity: 0.08,
-        volume_spike: 0.12,
-        price_dislocation: 0.10,
-        probability_edge: 0.06,
-        risk_flag: -0.14,
-      },
-      thresholds: {
-        bullish: 0.12,
-        bearish: -0.12,
-      },
-      opportunityTypeBias: {
-        TOKEN: 0.06,
-        PREDICTION_MARKET: -0.12,
-      },
-    }),
-    pricingPlans: [
-      {
-        name: 'Flagship Atlas',
-        cadence: 'monthly',
-        amountUsd: 49,
-        description: '完整备忘录、投资组合可见性和高级内容解锁。',
-      },
-    ],
-  },
-  {
     slug: 'onchain-fundamentals-manager',
     name: 'On-chain Fundamentals',
     description:
@@ -206,6 +124,75 @@ const managers = [
         cadence: 'monthly',
         amountUsd: 45,
         description: 'TVL 流动报告、聪明资金异动提醒、协议升级观察列表。',
+      },
+    ],
+  },
+  {
+    slug: 'crypto-cta',
+    name: 'Crypto CTA',
+    description:
+      '纯量价系统化交易。不看新闻不听故事，只根据价格趋势强度、动量方向和波动率信号做出系统性决策。趋势明确时跟随，震荡时自动空仓等待。',
+    style: '量价CTA',
+    riskProfile: '系统型',
+    rebalanceCadence: '每日',
+    memoStyle: '技术面分析报告',
+    universe: '流动性充足的主流加密货币（按成交量筛选）',
+    pricingSummary: '¥249/月 量价研究',
+    metadata: JSON.stringify({
+      strategyType: 'cta',
+      signalWeights: {},
+      thresholds: { bullish: 0.1, bearish: -0.1 },
+      opportunityTypeBias: { TOKEN: 0.0, PREDICTION_MARKET: -1.0 },
+      dataSources: ['coingecko-ohlcv'],
+    }),
+    pricingPlans: [
+      {
+        name: 'CTA Desk',
+        cadence: 'monthly',
+        amountUsd: 36,
+        description: '每日技术面分析、趋势跟踪信号、持仓报告。',
+      },
+    ],
+  },
+  {
+    slug: 'prediction-market-manager',
+    name: 'Prediction Market Manager',
+    description:
+      '专注 Polymarket 加密预测市场的概率套利。利用概率偏差、事件临近度和催化剂信号，捕捉预测市场的定价错误。',
+    style: '预测市场',
+    riskProfile: '事件型',
+    rebalanceCadence: '每日',
+    memoStyle: '概率分析与事件情景',
+    universe: 'Polymarket 加密预测市场（BTC 价格目标、ETF 审批、DeFi TVL、监管政策等）',
+    pricingSummary: '¥199/月 预测市场研究',
+    metadata: JSON.stringify({
+      signalWeights: {
+        probability_edge: 0.24,
+        event_proximity: 0.20,
+        catalyst_setup: 0.14,
+        trend_regime: 0.14,
+        opportunity_quality: 0.10,
+        volume_spike: 0.08,
+        news_heat: 0.06,
+        price_dislocation: 0.06,
+        risk_flag: -0.20,
+      },
+      thresholds: {
+        bullish: 0.08,
+        bearish: -0.06,
+      },
+      opportunityTypeBias: {
+        TOKEN: -0.16,
+        PREDICTION_MARKET: 0.20,
+      },
+      dataSources: ['polymarket-gamma', 'polymarket-clob'],
+    }),
+    pricingPlans: [
+      {
+        name: 'PM Edge',
+        cadence: 'monthly',
+        amountUsd: 29,
+        description: '预测市场概率分析、事件提醒和持仓追踪。',
       },
     ],
   },

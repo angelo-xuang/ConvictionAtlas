@@ -6,6 +6,7 @@ const steps = [
   '/api/internal/ingest/coingecko',
   '/api/internal/ingest/polymarket',
   '/api/internal/normalize/opportunities',
+  '/api/internal/ingest/ohlcv',
   '/api/internal/ingest/news',
   '/api/internal/signals/recompute',
   '/api/internal/managers/run',

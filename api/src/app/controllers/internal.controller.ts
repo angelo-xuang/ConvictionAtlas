@@ -44,6 +44,11 @@ export class InternalController {
     return this.sourceIngestionService.ingestPolymarket(payload?.limit);
   }
 
+  @Post('ingest/ohlcv')
+  ingestOHLCV(@Body() payload?: { timeframe?: string; days?: number }) {
+    return this.sourceIngestionService.ingestOHLCV(payload?.timeframe, payload?.days);
+  }
+
   @Post('ingest/news')
   ingestNews(@Body() payload?: { limitPerOpportunity?: number }) {
     return this.sourceIngestionService.ingestNews(payload?.limitPerOpportunity);

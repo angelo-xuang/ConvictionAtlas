@@ -28,6 +28,21 @@ function formatShortDate(value: string) {
   }).format(new Date(value));
 }
 
+function renderMarkdown(md: string): string {
+  if (!md) return '';
+  let html = md
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^### (.+)$/gm, '<h4 style="font-size:0.85rem;font-weight:600;margin:10px 0 4px;color:var(--text)">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 style="font-size:0.9rem;font-weight:700;margin:12px 0 6px;color:var(--text)">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2 style="font-size:0.95rem;font-weight:700;margin:14px 0 6px;color:var(--text)">$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li style="margin:3px 0;padding-left:4px;font-size:0.82rem;line-height:1.6">$1</li>')
+    .replace(/(<li[^>]*>.*?<\/li>\n?)+/g, (m) => '<ul style="padding-left:16px;margin:4px 0">' + m + '</ul>')
+    .replace(/\n{2,}/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
+  return html;
+}
+
 type Props = { slug: string };
 
 export default function ManagerDetailClient({ slug }: Props) {
@@ -184,7 +199,7 @@ export default function ManagerDetailClient({ slug }: Props) {
           <div className="card">
             <div className="card-header">
               <h2 style={{ fontSize: '0.95rem' }}>当前决策</h2>
-              <span className="muted text-xs">按信念排序的模型输出</span>
+              <span className="muted text-xs">按评分排序的模型输出</span>
             </div>
             {manager.latestDecisions.length > 0 ? (
               <div className="decision-grid">
@@ -194,16 +209,23 @@ export default function ManagerDetailClient({ slug }: Props) {
                       <span className={`badge ${getDirectionClass(d.direction)}`}>
                         {formatDirection(d.direction)}
                       </span>
-                      <span className="text-xs tabular muted">
-                        {formatPercent(d.targetWeight * 100)} 权重
-                      </span>
+                      {(d.opportunity.currentPrice != null || d.opportunity.priceChange24h != null) && (
+                        <span className="text-xs tabular muted">
+                          {d.opportunity.currentPrice != null && formatMoney(d.opportunity.currentPrice)}
+                          {d.opportunity.priceChange24h != null && (
+                            <span className={getSignedClass(d.opportunity.priceChange24h)} style={{ marginLeft: 6 }}>
+                              {formatPercent(d.opportunity.priceChange24h)}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </div>
                     <Link href={`/opportunities/detail?slug=${d.opportunity.slug}`} style={{ fontWeight: 600, fontSize: '0.88rem' }}>
                       {d.opportunity.title}
                     </Link>
                     <div className="flex items-center justify-between mt-2 text-xs">
                       <span className="muted">
-                        信念 {d.convictionScore.toFixed(3)}
+                        评分 {d.convictionScore.toFixed(3)}
                       </span>
                       {d.opportunity.currentPrice != null && (
                         <span className="tabular">{formatMoney(d.opportunity.currentPrice)}</span>
@@ -246,7 +268,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                     {memo.content && (
                       <div
                         className="memo-content"
-                        dangerouslySetInnerHTML={{ __html: memo.content }}
+                        dangerouslySetInnerHTML={{ __html: renderMarkdown(memo.content) }}
                       />
                     )}
                   </div>
@@ -313,7 +335,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                         {pos.opportunity.title}
                       </Link>
                       <span className="muted text-xs">
-                        信念 {pos.convictionScore.toFixed(3)}
+                        评分 {pos.convictionScore.toFixed(3)}
                       </span>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -343,8 +365,7 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Signal architecture */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>信号架构</h2>
-              <span className="muted text-xs">模型偏好</span>
+              <h2 style={{ fontSize: '0.95rem' }}>信号架构与评分逻辑</h2>
             </div>
             <div className="signal-list">
               {manager.signalMix.map((sig, i) => (
@@ -365,6 +386,64 @@ export default function ManagerDetailClient({ slug }: Props) {
                 </div>
               ))}
             </div>
+            {manager.blueprint && (
+              <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--surface)', borderRadius: 6, fontSize: '0.78rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
+                <strong style={{ color: 'var(--text)' }}>持仓逻辑</strong>
+                <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {manager.blueprint.strategyType === 'cta' ? (
+                    <>
+                      <div>
+                        <span style={{ color: 'var(--text)' }}>趋势过滤：</span>
+                        ADX &gt; {manager.blueprint.ctaParams?.adxThreshold ?? 20} 才交易，否则空仓等待
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text)' }}>方向确认：</span>
+                        均线多头排列 (MA7 &gt; MA25 &gt; MA99) + 动量 &gt; 0 → 做多
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text)' }}>仓位计算：</span>
+                        风险平价 (单标的最大风险 {(manager.blueprint.ctaParams?.maxRiskPerPosition ?? 0.02) * 100}% / ATR)
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text)' }}>仓位约束：</span>
+                        最多 {manager.blueprint.maxPositions} 个持仓，最低 {(manager.blueprint.cashFloor * 100).toFixed(0)}% 现金
+                      </div>
+                      <div style={{ marginTop: 4, borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+                        纯量价系统：不看新闻、不听故事，只根据 K 线趋势强度、动量方向和波动率做决策。
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <span style={{ color: 'var(--text)' }}>偏好标的：</span>
+                        {Object.entries(manager.blueprint.opportunityTypeBias).map(([type, bias]) => {
+                          const label = type === 'TOKEN' ? '代币' : type === 'PREDICTION_MARKET' ? '预测市场' : type;
+                          const biasVal = Number(bias);
+                          return (
+                            <span key={type} style={{ marginLeft: 8 }}>
+                              <span style={{ color: biasVal >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
+                                {label} {biasVal >= 0 ? '+' : ''}{(biasVal * 100).toFixed(0)}%
+                              </span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text)' }}>建仓门槛：</span>
+                        评分 &gt; {(manager.blueprint.bullishThreshold * 100).toFixed(0)}% 纳入，&lt; {(manager.blueprint.bearishThreshold * 100).toFixed(0)}% 剔除
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text)' }}>仓位约束：</span>
+                        最多 {manager.blueprint.maxPositions} 个持仓，最低 {(manager.blueprint.cashFloor * 100).toFixed(0)}% 现金
+                      </div>
+                      <div style={{ marginTop: 4, borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+                        评分 = 加权信号值之和 + 标的类型偏好，范围 [-1, +1]。按评分比例分配权重。
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Rebalance history */}

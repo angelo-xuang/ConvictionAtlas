@@ -4,7 +4,7 @@ set -euo pipefail
 cd /root/workspace/ConvictionAtlas
 
 export NODE_ENV=production
-export NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-/api}"
+export NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-/atlas/api}"
 export NEXT_PUBLIC_API_DOCS_URL="${NEXT_PUBLIC_API_DOCS_URL:-/docs}"
 unset GITHUB_PAGES
 unset NEXT_PUBLIC_STATIC_DATA_MODE

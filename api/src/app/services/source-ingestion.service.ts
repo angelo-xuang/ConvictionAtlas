@@ -1448,6 +1448,74 @@ export class SourceIngestionService {
     return 'Unknown provider error';
   }
 
+
+  /**
+   * Ingest OHLCV candle data from CoinGecko for all active TOKEN opportunities.
+   * CoinGecko /coins/{id}/ohlc returns [timestamp, open, high, low, close] arrays.
+   * Rate limited: 2s between requests, 60s backoff on 429.
+   */
+  async ingestOHLCV(timeframe: string = '1d', days: number = 180) {
+    const baseUrl = this.configService.get<string>('COINGECKO_BASE_URL')!;
+    const opportunities = await this.prisma.opportunity.findMany({
+      where: { type: 'TOKEN', status: 'active' },
+    });
+
+    let ingested = 0;
+    const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+    for (const opp of opportunities) {
+      const coinId = opp.externalKey.replace('coingecko:', '');
+      if (!coinId || opp.externalKey === opp.slug) continue;
+
+      const url = this.buildUrl(baseUrl, `coins/${coinId}/ohlc`);
+      url.searchParams.set('vs_currency', 'usd');
+      url.searchParams.set('days', String(Math.min(days, 365)));
+
+      try {
+        if (ingested > 0) await sleep(2000);
+
+        const candles = await this.fetchJson<number[][]>(url.toString());
+        if (!Array.isArray(candles) || candles.length === 0) continue;
+
+        for (const [ts, open, high, low, close] of candles) {
+          const timestamp = new Date(ts);
+          if (isNaN(timestamp.getTime())) continue;
+
+          await this.prisma.candle.upsert({
+            where: {
+              opportunityId_timeframe_timestamp: {
+                opportunityId: opp.id,
+                timeframe,
+                timestamp,
+              },
+            },
+            update: { open, high, low, close, volume: 0 },
+            create: {
+              opportunityId: opp.id,
+              timeframe,
+              timestamp,
+              open,
+              high,
+              low,
+              close,
+              volume: 0,
+            },
+          });
+        }
+        ingested++;
+        console.log(`OHLCV: ${coinId} -> ${candles.length} candles`);
+      } catch (error: any) {
+        console.warn(`OHLCV ingest failed for ${coinId}:`, error?.message);
+        if (error?.response?.status === 429) {
+          console.log('Rate limited, waiting 60s...');
+          await sleep(60000);
+        }
+      }
+    }
+
+    return { source: 'ohlcv', ingested, timeframe, candlesPerAsset: days };
+  }
+
   private buildUrl(baseUrl: string, path: string) {
     const url = new URL(baseUrl);
     url.pathname = `${url.pathname.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;

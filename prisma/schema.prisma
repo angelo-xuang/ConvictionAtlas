@@ -19,6 +19,7 @@ enum SourceKind {
   GNEWS
   NEWSAPI
   GOOGLE_NEWS_RSS
+  COINGECKO_OHLCV
 }
 
 enum Direction {
@@ -122,6 +123,7 @@ model Opportunity {
   decisions      ManagerDecision[]
   positions      Position[]
   memos          Memo[]
+  candles       Candle[]
 
   @@index([type, updatedAt])
   @@index([sourceKind, updatedAt])
@@ -139,6 +141,24 @@ model OpportunityHistory {
   @@unique([opportunityId, pointAt])
   @@index([opportunityId, pointAt])
 }
+
+model Candle {
+  id            String   @id @default(cuid())
+  opportunityId String
+  timeframe     String   // "1d", "4h", "1h"
+  timestamp     DateTime
+  open          Float
+  high          Float
+  low           Float
+  close         Float
+  volume        Float
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, timeframe, timestamp])
+  @@index([opportunityId, timeframe])
+}
+
 
 model NewsItem {
   id            String      @id @default(cuid())

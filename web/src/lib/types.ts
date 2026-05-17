@@ -188,6 +188,23 @@ export interface MemoUnlockResult {
   message: string;
 }
 
+
+export interface CTABlueprintParams {
+  adxThreshold: number;
+  maxRiskPerPosition: number;
+  onlyTokenTypes: boolean;
+}
+
+export interface ManagerBlueprintInfo {
+  strategyType: 'linear' | 'cta';
+  opportunityTypeBias: Partial<Record<string, number>>;
+  bullishThreshold: number;
+  bearishThreshold: number;
+  cashFloor: number;
+  maxPositions: number;
+  ctaParams?: CTABlueprintParams;
+}
+
 export interface ManagerSummary {
   id: string;
   slug: string;
@@ -218,6 +235,7 @@ export interface ManagerSummary {
   }>;
   performanceSeries: PerformanceSeriesPoint[];
   signalMix: SignalMixItem[];
+  blueprint: ManagerBlueprintInfo;
   pricingPlans: PricingPlan[];
 }
 
@@ -251,6 +269,7 @@ export interface ManagerDetail {
     lookbackDays: number;
   };
   signalMix: SignalMixItem[];
+  blueprint: ManagerBlueprintInfo;
   latestDecisions: Array<{
     id: string;
     direction: Direction;

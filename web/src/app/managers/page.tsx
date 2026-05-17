@@ -181,6 +181,9 @@ function ManagerCard({ manager }: { manager: ManagerSummary }) {
         <div className="info">
           <h3>{manager.name}</h3>
           <span className="badge badge-accent" style={{ marginTop: 4 }}>{manager.style}</span>
+          <div style={{ marginTop: 6, fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {manager.description}
+          </div>
         </div>
       </div>
 

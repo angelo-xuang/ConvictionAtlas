@@ -109,6 +109,18 @@ export class QueryService {
             ) ?? [],
           performanceSeries: analytics.series,
           signalMix: this.buildSignalMix(manager.slug, manager.metadata),
+          blueprint: (() => {
+            const bp = getManagerBlueprint(manager.slug);
+            return {
+              strategyType: bp.strategyType,
+              opportunityTypeBias: bp.opportunityTypeBias ?? {},
+              bullishThreshold: bp.bullishThreshold ?? 0,
+              bearishThreshold: bp.bearishThreshold ?? 0,
+              cashFloor: bp.cashFloor,
+              maxPositions: bp.maxPositions,
+              ctaParams: bp.ctaParams ?? undefined,
+            };
+          })(),
           pricingPlans: manager.pricingPlans,
         };
       }),
@@ -155,6 +167,18 @@ export class QueryService {
         lookbackDays: analytics.lookbackDays,
       },
       signalMix: this.buildSignalMix(manager.slug, manager.metadata),
+      blueprint: (() => {
+        const bp = getManagerBlueprint(manager.slug);
+        return {
+          strategyType: bp.strategyType,
+          opportunityTypeBias: bp.opportunityTypeBias ?? {},
+          bullishThreshold: bp.bullishThreshold ?? 0,
+          bearishThreshold: bp.bearishThreshold ?? 0,
+          cashFloor: bp.cashFloor,
+          maxPositions: bp.maxPositions,
+          ctaParams: bp.ctaParams ?? undefined,
+        };
+      })(),
       latestDecisions: latestDecisions.map((decision) => ({
         id: decision.id,
         direction: decision.direction,
@@ -923,12 +947,30 @@ export class QueryService {
       return null;
     }
 
+    // CTA managers use simple trend-following from price history
+    if (blueprint.strategyType === 'cta') {
+      const change7d = this.calculateHistoricalChangeAt(
+        opportunity.historyPoints, timestamp, 7, opportunity.type,
+      );
+      const change30d = this.calculateHistoricalChangeAt(
+        opportunity.historyPoints, timestamp, 30, opportunity.type,
+      );
+      if (change7d === null || change30d === null) return null;
+      const trend = (change7d * 0.6 + change30d * 0.4);
+      const rawScore = clamp(trend, -1, 1);
+      return {
+        score: round(rawScore, 4),
+        targetWeight: round(clamp(Math.abs(rawScore) > 0.05 ? rawScore : 0, 0.03, 0.3), 4),
+        historyPoints: opportunity.historyPoints,
+      };
+    }
+
     const signalMap = this.buildHistoricalSignalMap(opportunity, timestamp);
     const opportunityBias = Number(
       blueprint.opportunityTypeBias?.[opportunity.type] ?? 0,
     );
     const rawScore = clamp(
-      Object.entries(blueprint.signalWeights).reduce((sum, [signalName, weight]) => {
+      Object.entries(blueprint.signalWeights!).reduce((sum, [signalName, weight]) => {
         return sum + Number(signalMap[signalName] ?? 0) * Number(weight);
       }, opportunityBias),
       -1,

@@ -7,8 +7,8 @@ const isGithubPages = process.env.GITHUB_PAGES === 'true';
 const nextConfig = {
   nx: {},
   output: 'export',
-  basePath: isGithubPages ? '/ConvictionAtlas' : undefined,
-  assetPrefix: isGithubPages ? '/ConvictionAtlas/' : undefined,
+  basePath: '/atlas',
+  assetPrefix: '/atlas/',
   trailingSlash: true,
   images: { unoptimized: true },
   experimental: { devtoolSegmentExplorer: false },

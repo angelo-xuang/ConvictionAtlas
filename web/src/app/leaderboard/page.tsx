@@ -93,7 +93,7 @@ export default function LeaderboardPage() {
                 <th>价格</th>
                 <th>24h</th>
                 <th>成交量</th>
-                <th>信念</th>
+                <th>评分</th>
                 <th>信号</th>
               </tr>
             </thead>

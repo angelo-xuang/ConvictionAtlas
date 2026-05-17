@@ -9,7 +9,7 @@ import { PerfLine } from '../../../components/Chart';
 
 export default function OpportunityDetailClient() {
   const searchParams = useSearchParams();
-  const id = searchParams.get('id');
+  const id = searchParams.get('id') || searchParams.get('slug');
 
   const [detail, setDetail] = useState<OpportunityDetail | null>(null);
   const [decisions, setDecisions] = useState<ManagerDecision[]>([]);
@@ -41,8 +41,18 @@ export default function OpportunityDetailClient() {
   if (loading) return <div className="shell"><p className="muted" style={{ padding: '60px 0' }}>加载中...</p></div>;
   if (!detail) return <div className="shell"><div className="error-card">未找到该标的。</div></div>;
 
-  const priceHistoryPoints = history.map(h => h.price).reverse();
-  const historyDates = history.map(h => formatDate(h.pointAt)).reverse();
+  // Use /history endpoint data first, fall back to metadata.priceHistory
+  const metaPrices: number[] = (detail as any)?.metadata?.priceHistory ?? [];
+  const priceHistoryPoints = history.length > 0
+    ? history.map(h => h.price).reverse()
+    : metaPrices;
+  const historyDates = history.length > 0
+    ? history.map(h => formatDate(h.pointAt)).reverse()
+    : metaPrices.map((_, i) => `T+${i + 1}`);
+
+  const priceTrend = priceHistoryPoints.length >= 2
+    ? priceHistoryPoints[priceHistoryPoints.length - 1] - priceHistoryPoints[0]
+    : 0;
 
   return (
     <div className="shell">
@@ -78,10 +88,15 @@ export default function OpportunityDetailClient() {
         </div>
       </div>
 
-      {priceHistoryPoints.length > 0 && (
+      {priceHistoryPoints.length > 1 && (
         <div className="card mb-4">
-          <div className="eyebrow mb-2">价格历史</div>
-          <PerfLine points={priceHistoryPoints} dateLabels={historyDates} height={200} tone={detail.priceChange24h !== null && detail.priceChange24h < 0 ? 'negative' : 'positive'} />
+          <div className="card-header">
+            <span className="eyebrow">价格走势</span>
+            <span className={`text-sm font-semibold ${priceTrend >= 0 ? 'positive' : 'negative'}`}>
+              {priceTrend >= 0 ? '+' : ''}{((priceTrend / priceHistoryPoints[0]) * 100).toFixed(1)}%
+            </span>
+          </div>
+          <PerfLine points={priceHistoryPoints} dateLabels={historyDates} height={200} tone={priceTrend >= 0 ? 'positive' : 'negative'} />
         </div>
       )}
 
@@ -117,7 +132,7 @@ export default function OpportunityDetailClient() {
                       <strong className="text-sm">{d.manager.name}</strong>
                       <span className={`badge ${getDirectionClass(d.direction)}`}>{formatDirection(d.direction)}</span>
                     </div>
-                    <div className="text-xs muted mt-2">信念: {d.convictionScore.toFixed(2)} | 目标: {(d.targetWeight * 100).toFixed(1)}%</div>
+                    <div className="text-xs muted mt-2">评分: {d.convictionScore.toFixed(2)} | 目标: {(d.targetWeight * 100).toFixed(1)}%</div>
                   </div>
                 ))}
               </div>

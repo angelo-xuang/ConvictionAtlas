@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { MiniLine } from './Chart';
 import { fetchPageData, formatReturn, getSignedClass } from '../lib/api';
 import type { ManagerSummary } from '../lib/types';
@@ -54,7 +55,18 @@ export function HeroPerformanceChart() {
         const tone = ret > 0 ? 'positive' : ret < 0 ? 'negative' : 'neutral';
 
         return (
-          <div key={m.slug} className="card" style={{ padding: 16 }}>
+          <Link
+            key={m.slug}
+            href={`/managers/${m.slug}`}
+            className="card"
+            style={{
+              padding: 16,
+              textDecoration: 'none',
+              color: 'inherit',
+              transition: 'box-shadow 0.15s, transform 0.15s',
+              cursor: 'pointer',
+            }}
+          >
             <div
               style={{
                 display: 'flex',
@@ -64,7 +76,7 @@ export function HeroPerformanceChart() {
               }}
             >
               <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                {m.name}
+                {m.style ?? m.name}
               </span>
               <span className={`badge ${getSignedClass(ret)}`}>
                 {formatReturn(ret)}
@@ -72,10 +84,10 @@ export function HeroPerformanceChart() {
             </div>
             <MiniLine
               points={m.performanceSeries.map((p) => p.nav)}
-              height={48}
+              height={64}
               tone={tone}
             />
-          </div>
+          </Link>
         );
       })}
     </div>

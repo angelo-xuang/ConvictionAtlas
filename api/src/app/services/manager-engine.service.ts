@@ -4,6 +4,8 @@ import { getManagerBlueprint } from '../core/manager-blueprints';
 import { clamp, round, serializeJson } from '../core/helpers';
 import { isCurrentInvestableOpportunity } from '../core/opportunity-universe';
 import { PrismaService } from '../prisma/prisma.service';
+import { computeAllIndicators, type CandleLike } from '../core/technical-indicators';
+import { ctaScore } from '../core/scoring/cta-scoring';
 
 @Injectable()
 export class ManagerEngineService {
@@ -33,13 +35,49 @@ export class ManagerEngineService {
       const blueprint = getManagerBlueprint(manager.slug);
 
       for (const opportunity of opportunities) {
+      if (blueprint.strategyType === 'cta') {
+        // ─── CTA Decision Path ───
+        if (opportunity.type !== 'TOKEN') continue; // CTA only trades tokens
+        const candles = await this.prisma.candle.findMany({
+          where: { opportunityId: opportunity.id, timeframe: '1d' },
+          orderBy: { timestamp: 'asc' },
+        });
+        if (candles.length < 30) continue; // Need at least 30 days
+        const candleLikes: CandleLike[] = candles.map(c => ({
+          open: c.open, high: c.high, low: c.low, close: c.close,
+          volume: c.volume, timestamp: c.timestamp,
+        }));
+        const indicators = computeAllIndicators(candleLikes);
+        const params = blueprint.ctaParams!;
+        const result = ctaScore(indicators, params);
+        const direction =
+          result.direction === 'BULLISH' ? Direction.BULLISH :
+          result.direction === 'BEARISH' ? Direction.BEARISH :
+          Direction.NEUTRAL;
+        rows.push({
+          managerId: manager.id,
+          opportunityId: opportunity.id,
+          direction,
+          convictionScore: round(result.direction === 'NEUTRAL' ? 0 : result.score, 4),
+          targetWeight: round(result.positionSize, 4),
+          rationale: result.rationale,
+          computedAt,
+          metadata: serializeJson({
+            blueprint: blueprint.label,
+            strategyType: 'cta',
+            indicators,
+            topHeadline: opportunity.newsItems[0]?.title ?? null,
+          }),
+        });
+      } else {
+        // ─── Linear Decision Path (existing) ───
         const signalMap = Object.fromEntries(
           opportunity.signals.map((signal) => [signal.name, signal.value]),
         );
         const opportunityBias = Number(
           blueprint.opportunityTypeBias?.[opportunity.type] ?? 0,
         );
-        const drivers = Object.entries(blueprint.signalWeights).map(
+        const drivers = Object.entries(blueprint.signalWeights!).map(
           ([signalName, weight]) => {
             const value = Number(signalMap[signalName] ?? 0);
             return {
@@ -57,9 +95,9 @@ export class ManagerEngineService {
           1,
         );
         const direction =
-          rawScore > blueprint.bullishThreshold
+          rawScore > blueprint.bullishThreshold!
             ? Direction.BULLISH
-            : rawScore < blueprint.bearishThreshold
+            : rawScore < blueprint.bearishThreshold!
               ? Direction.BEARISH
               : Direction.NEUTRAL;
         const targetWeight =
@@ -87,6 +125,7 @@ export class ManagerEngineService {
           computedAt,
           metadata: serializeJson({
             blueprint: blueprint.label,
+            strategyType: 'linear',
             opportunityBias,
             thresholds: {
               bullish: blueprint.bullishThreshold,
@@ -96,6 +135,7 @@ export class ManagerEngineService {
             topHeadline: opportunity.newsItems[0]?.title ?? null,
           }),
         });
+      }
       }
     }
 

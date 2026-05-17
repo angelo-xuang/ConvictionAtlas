@@ -64,7 +64,7 @@ export class MemoService {
         data: {
           managerId: manager.id,
           opportunityId: leadPosition.opportunityId,
-          title: `${manager.name}: ${leadPosition.opportunity.title}`,
+          title: `${manager.style}经理：${leadPosition.opportunity.title}`,
           summary: truncate(
             content
               .replace(/[#>*`_-]/g, ' ')
@@ -101,18 +101,18 @@ export class MemoService {
     });
 
     const prompt = [
-      'You are writing an investment memo for Conviction Atlas.',
-      `Manager style: ${manager.style}.`,
-      `Risk profile: ${manager.riskProfile}.`,
-      'Return markdown only. Do not wrap the answer in code fences.',
-      'Use exactly this structure:',
-      '## Thesis',
-      'A concise thesis paragraph.',
-      '### Portfolio shifts',
-      'A bullet list describing the current top positions and why they matter.',
-      '### Risk notes',
-      'A short bullet list of current risks.',
-      'Base the memo only on the supplied portfolio state.',
+      '你正在为 Conviction Atlas 撰写投资备忘录。',
+      `经理风格: ${manager.style}。`,
+      `风险偏好: ${manager.riskProfile}。`,
+      '仅输出 markdown，不要用代码块包裹。',
+      '严格按以下结构输出：',
+      '## 核心观点',
+      '一段简洁的核心观点阐述。',
+      '### 组合调仓逻辑',
+      '用项目符号列表逐一分析当前前几大持仓及其逻辑。',
+      '### 风险提示',
+      '用项目符号列出当前主要风险。',
+      '所有内容必须基于提供的组合数据，不要编造信息。',
       '',
       ...topLines,
     ].join('\n');
@@ -123,7 +123,7 @@ export class MemoService {
         {
           role: 'system',
           content:
-            'You are an investment research assistant writing crisp, analytical markdown memos.',
+            '你是一位专业投资研究分析师，用清晰、深入的中文撰写 markdown 格式的投资备忘录。语言风格：专业但不晦涩，像给基金经理的内部分析报告。',
         },
         { role: 'user', content: prompt },
       ],

@@ -31,7 +31,7 @@ export class LlmService {
     return (
       this.configService.get<string>('DEEPSEEK_MODEL') ??
       this.configService.get<string>('LLM_MODEL') ??
-      'deepseek-chat'
+      'deepseek-v4-pro'
     );
   }
 
@@ -50,8 +50,10 @@ export class LlmService {
           model,
           messages,
           temperature,
-          max_tokens: 1200,
+          max_tokens: 8000,
           stream: false,
+          thinking: { type: 'enabled' },
+          reasoning_effort: 'high',
         },
         {
           headers: {
@@ -59,7 +61,7 @@ export class LlmService {
             Accept: 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          timeout: 45_000,
+          timeout: 120_000,
         },
       );
 

@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { HeroPerformanceChart } from '../components/hero-performance-chart';
+import { ManagerCount } from '../components/manager-count';
 
 const stats = [
-  { label: 'AI 经理', value: '6', detail: '不同的投资风格、风险偏好与信念引擎' },
+  { label: 'AI 经理', value: '__MANAGER_COUNT__', detail: '不同的投资风格、风险偏好与评分引擎' },
   { label: '数据源', value: '2+', detail: 'CoinGecko 加密价格 + Polymarket 预测市场' },
   { label: '追踪资产', value: '12+', detail: '按市值追踪的主流代币及活跃预测市场' },
 ];
@@ -13,7 +14,7 @@ const features = [
     index: '01',
     eyebrow: '组合',
     title: 'AI 基金经理组合',
-    description: '六个专业 AI 经理，含实时组合、业绩曲线与投资备忘录。',
+    description: '专业 AI 经理团队，含实时组合、业绩曲线与投资备忘录。',
     meta: '净值 · 业绩 · 持仓',
   },
   {
@@ -29,8 +30,8 @@ const features = [
     index: '03',
     eyebrow: '排行',
     title: '业绩排行',
-    description: '按净值、夏普比率、命中率比较经理。查看哪些标的信念最强。',
-    meta: '夏普 · 收益 · 信念',
+    description: '按净值、夏普比率、命中率比较经理。查看哪些标的评分最强。',
+    meta: '夏普 · 收益 · 评分',
   },
 ];
 
@@ -42,7 +43,7 @@ export default function Index() {
         <div>
           <span className="eyebrow">AI 驱动的投资智能平台</span>
           <h1>
-            六个 AI 基金经理实时分析加密市场并管理投资组合。
+            AI 基金经理实时分析加密市场并管理投资组合。
           </h1>
           <p>
             Conviction Atlas 运行自主投资经理，采集市场数据、计算信号、做出决策并发布推理过程 — 全部通过一个界面呈现。
@@ -60,7 +61,7 @@ export default function Index() {
         <div className="landing-chart-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <span className="eyebrow">实时业绩</span>
-            <span className="badge badge-neutral">6 经理</span>
+            <ManagerCount />
           </div>
           <HeroPerformanceChart />
         </div>
@@ -71,7 +72,9 @@ export default function Index() {
         {stats.map((s) => (
           <div key={s.label} className="landing-stat-card">
             <div className="stat-label">{s.label}</div>
-            <div className="stat-value" style={{ margin: '6px 0' }}>{s.value}</div>
+            <div className="stat-value" style={{ margin: '6px 0' }}>
+              {s.value === '__MANAGER_COUNT__' ? <ManagerCount valueOnly /> : s.value}
+            </div>
             <div className="text-sm muted">{s.detail}</div>
           </div>
         ))}
