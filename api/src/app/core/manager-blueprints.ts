@@ -96,6 +96,8 @@ export const MANAGER_BLUEPRINTS: ManagerBlueprint[] = [
     slug: 'crypto-cta',
     label: 'Crypto CTA',
     strategyType: 'cta',
+    bullishThreshold: 0.05,
+    bearishThreshold: -0.05,
     cashFloor: 0.25,
     maxPositions: 6,
     ctaParams: {

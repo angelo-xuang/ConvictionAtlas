@@ -949,6 +949,7 @@ export class QueryService {
 
     // CTA managers use simple trend-following from price history
     if (blueprint.strategyType === 'cta') {
+      if (opportunity.type !== 'TOKEN') return null; // CTA only trades tokens
       const change7d = this.calculateHistoricalChangeAt(
         opportunity.historyPoints, timestamp, 7, opportunity.type,
       );
@@ -956,11 +957,14 @@ export class QueryService {
         opportunity.historyPoints, timestamp, 30, opportunity.type,
       );
       if (change7d === null || change30d === null) return null;
+      // CTA: only go long when both timeframes confirm uptrend
       const trend = (change7d * 0.6 + change30d * 0.4);
       const rawScore = clamp(trend, -1, 1);
+      // Only allocate when trend is clearly positive
+      const targetWeight = rawScore > 0.05 ? clamp(rawScore, 0.05, 0.3) : 0;
       return {
         score: round(rawScore, 4),
-        targetWeight: round(clamp(Math.abs(rawScore) > 0.05 ? rawScore : 0, 0.03, 0.3), 4),
+        targetWeight: round(targetWeight, 4),
         historyPoints: opportunity.historyPoints,
       };
     }
