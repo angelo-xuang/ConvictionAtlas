@@ -1,5 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { BacktestService } from '../services/backtest.service';
+import { CtaBackfillService } from '../services/cta-backfill.service';
 import { ManagerEngineService } from '../services/manager-engine.service';
 import { MemoService } from '../services/memo.service';
 import { PerformanceService } from '../services/performance.service';
@@ -17,6 +18,7 @@ export class InternalController {
     private readonly performanceService: PerformanceService,
     private readonly memoService: MemoService,
     private readonly backtestService: BacktestService,
+    private readonly ctaBackfillService: CtaBackfillService,
   ) {}
 
   @Post('bootstrap')
@@ -97,5 +99,18 @@ export class InternalController {
   @Post('backtest/run')
   async runBacktest(@Body() payload?: { days?: number }) {
     return this.backfillHistory(payload);
+  }
+
+  @Post('backfill/cta')
+  async backfillCta(@Body() payload?: { days?: number; managerSlug?: string }) {
+    try {
+      return await this.ctaBackfillService.backfillCta(
+        payload?.days ?? 180,
+        payload?.managerSlug ?? 'crypto-cta',
+      );
+    } catch (err) {
+      console.error('[CTA Backfill Error]', err);
+      throw err;
+    }
   }
 }

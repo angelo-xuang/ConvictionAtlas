@@ -19,6 +19,7 @@ import { LlmService } from './services/llm.service';
 import { TronPaymentService } from './services/tron-payment.service';
 import { BacktestService } from './services/backtest.service';
 import { CryptoDataBridgeService } from './services/crypto-data-bridge.service';
+import { CtaBackfillService } from './services/cta-backfill.service';
 
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true })],
@@ -44,6 +45,7 @@ import { CryptoDataBridgeService } from './services/crypto-data-bridge.service';
     TronPaymentService,
     BacktestService,
     CryptoDataBridgeService,
+    CtaBackfillService,
   ],
 })
 export class AppModule {}
