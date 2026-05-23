@@ -77,15 +77,32 @@ export class BacktestService {
     }
 
     const results: BacktestResult[] = [];
+    const skipped: Array<{ manager: string; reason: string }> = [];
+    const failures: Array<{ manager: string; error: string }> = [];
 
     for (const manager of managers) {
-      const result = await this.runManagerBacktest(
-        manager.id,
-        manager.slug,
-        universe,
-        timestamps,
-      );
-      results.push(result);
+      const blueprint = getManagerBlueprint(manager.slug);
+      // CTA strategies derive decisions from OHLCV candles, not from the
+      // opportunity-history price series this replay engine consumes. They
+      // get fresh NAV from the daily cron pipeline (managers/run ->
+      // portfolio/rebalance -> performance/snapshot), so skip them here.
+      if (blueprint.strategyType === 'cta' || !blueprint.signalWeights) {
+        skipped.push({ manager: manager.slug, reason: 'non-linear strategy' });
+        continue;
+      }
+      try {
+        const result = await this.runManagerBacktest(
+          manager.id,
+          manager.slug,
+          universe,
+          timestamps,
+        );
+        results.push(result);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[Backfill] manager ${manager.slug} failed: ${message}`);
+        failures.push({ manager: manager.slug, error: message });
+      }
     }
 
     return {
@@ -93,6 +110,8 @@ export class BacktestService {
       startDate: new Date(startTimestamp).toISOString().split('T')[0],
       endDate: new Date(latestTimestamp).toISOString().split('T')[0],
       managers: results,
+      skipped,
+      failures,
     };
   }
 
