@@ -16,7 +16,6 @@ export class PortfolioService {
 
     for (const manager of managers) {
       const blueprint = getManagerBlueprint(manager.slug);
-      // Use today's decisions if present; the engine writes per-day rows.
       const decisions = await this.prisma.managerDecision.findMany({
         where: {
           managerId: manager.id,
@@ -36,7 +35,6 @@ export class PortfolioService {
       const investableDecisions = decisions.filter((decision) =>
         isCurrentInvestableOpportunity(decision.opportunity),
       );
-      // Pick the most recent prior snapshot (any prior day) for NAV continuity.
       const previousSnapshot = await this.prisma.portfolioSnapshot.findFirst({
         where: { managerId: manager.id, dateKey: { lt: todayKey } },
         orderBy: { dateKey: 'desc' },
@@ -80,7 +78,6 @@ export class PortfolioService {
         update: snapshotData,
       });
 
-      // Replace positions for this snapshot (idempotent re-run).
       await this.prisma.position.deleteMany({
         where: { portfolioSnapshotId: snapshot.id },
       });

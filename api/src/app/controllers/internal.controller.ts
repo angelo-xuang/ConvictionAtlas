@@ -84,9 +84,6 @@ export class InternalController {
     return this.memoService.generateMemos(payload?.managerSlug);
   }
 
-  // Idempotent historical backfill. Replays manager decisions across the last
-  // `days` of OpportunityHistory and upserts PerformanceSnapshot per dateKey.
-  // Safe to run on every deploy or whenever the NAV series needs to be rebased.
   @Post('backfill/history')
   async backfillHistory(@Body() payload?: { days?: number }) {
     try {
@@ -97,7 +94,6 @@ export class InternalController {
     }
   }
 
-  // Legacy alias kept so existing cron / scripts keep working until cutover.
   @Post('backtest/run')
   async runBacktest(@Body() payload?: { days?: number }) {
     return this.backfillHistory(payload);

@@ -18,7 +18,6 @@ export class PerformanceService {
     let created = 0;
 
     for (const manager of managers) {
-      // Use today's portfolio (one per day after Phase 1 schema).
       const todayPortfolio = await this.prisma.portfolioSnapshot.findUnique({
         where: { managerId_dateKey: { managerId: manager.id, dateKey: todayKey } },
         include: {

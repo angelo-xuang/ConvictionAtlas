@@ -150,8 +150,6 @@ export class ManagerEngineService {
       }
     }
 
-    // Incremental upsert by (managerId, opportunityId, dateKey).
-    // Same-day re-runs overwrite the latest decision; previous days are preserved.
     for (const row of rows) {
       const { managerId, opportunityId, dateKey: rowDateKey, ...rest } = row;
       await this.prisma.managerDecision.upsert({

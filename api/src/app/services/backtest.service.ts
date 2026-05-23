@@ -76,9 +76,6 @@ export class BacktestService {
       return { error: `Insufficient timestamps (${timestamps.length})` };
     }
 
-    // Idempotent backfill: rely on (managerId, dateKey) upserts below; the
-    // old destructive deleteMany is no longer needed and was the reason a
-    // single backtest run was the only NAV source on prod.
     const results: BacktestResult[] = [];
 
     for (const manager of managers) {
@@ -223,8 +220,6 @@ export class BacktestService {
       });
       const riskScore = riskScores.length ? round(average(riskScores), 4) : 0;
 
-      // Persist snapshot — upsert by (managerId, dateKey) so multiple replays in the
-      // same day are idempotent.
       const portfolioDateKey = dateKey(new Date(currentTs));
       const portfolioData = {
         cashWeight,
@@ -652,21 +647,13 @@ export class BacktestService {
     }
     const rawReturn = endPrice / startPrice - 1;
 
-    // Per-manager return clamps — widened to capture crypto volatility
+    // Per-manager return clamps — widened to capture crypto volatility.
+    // Only slugs that exist in the DB (see prisma/seed.ts) are listed;
+    // anything else falls through to the conservative default below.
     if (managerSlug === 'narrative-manager') {
       return type === OpportunityType.TOKEN
         ? clamp(rawReturn, -0.05, 0.10)
         : clamp(rawReturn, -0.10, 0.16) * 0.28;
-    }
-    if (managerSlug === 'quant-manager') {
-      return type === OpportunityType.TOKEN
-        ? clamp(rawReturn, -0.04, 0.07)
-        : clamp(rawReturn, -0.08, 0.12) * 0.24;
-    }
-    if (managerSlug === 'hybrid-manager') {
-      return type === OpportunityType.TOKEN
-        ? clamp(rawReturn, -0.04, 0.08)
-        : clamp(rawReturn, -0.09, 0.14) * 0.26;
     }
     return type === OpportunityType.TOKEN
       ? clamp(rawReturn, -0.04, 0.06)

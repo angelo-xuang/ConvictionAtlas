@@ -16,7 +16,6 @@
     "pipeline:fast": "SKIP_MEMOS=1 node node_modules/tsx/dist/cli.mjs scripts/run-pipeline.ts",
     "data:export": "node node_modules/tsx/dist/cli.mjs scripts/export-local-data.ts",
     "seed:demo": "node node_modules/tsx/dist/cli.mjs scripts/seed-demo-data.ts",
-    "seed:hybrid": "node node_modules/tsx/dist/cli.mjs scripts/seed-simulated-signals-and-nav.ts",
     "deploy:web:prod": "bash scripts/deploy-web-prod.sh"
   },
   "keywords": [],

@@ -43,7 +43,7 @@ Quick links / 快速跳转:
 
 ### 项目简介
 
-**Conviction Atlas** 是一个由 **6 个自主运行的 AI 基金经理** 组成的 Web3 投资服务市场。  
+**Conviction Atlas** 是一个由 **5 个自主运行的 AI 基金经理** 组成的 Web3 投资服务市场。  
 每个经理都有独立的投资哲学、信号权重、仓位逻辑和业绩曲线，用户可以通过 **TRON Nile Testnet 的 USDT** 购买经理份额，查看调仓、信号、投研 Memo 和历史表现。
 
 核心理念：
@@ -63,7 +63,7 @@ Quick links / 快速跳转:
 
 - 统一采集 CoinGecko、Polymarket 与新闻数据
 - 生成 10+ 维度信号，包括 momentum、volume、narrative、catalyst、probability edge 等
-- 6 个经理独立做出方向、仓位与理由判断
+- 5 个经理独立做出方向、仓位与理由判断
 - 自动完成组合再平衡、NAV 快照与 LLM 投研备忘录
 - 支持经理份额购买、评价、排行榜与可视化对比
 
@@ -82,14 +82,13 @@ Quick links / 快速跳转:
 
 ### 六个 AI 基金经理
 
-| 经理 | 风格 | 核心信号偏好 | 风险 | 最大持仓 |
+| 经理 (slug) | 风格 | 核心信号 / 策略 | 风险 | 最大持仓 |
 |------|------|-------------|------|----------|
-| Narrative Manager | 叙事驱动 | `narrative_strength`, `opportunity_quality` | Aggressive | 5 |
-| Event-driven Manager | 事件驱动 | `catalyst_setup`, `event_proximity` | Moderate | 6 |
-| Quant Manager | 纯量化 | `market_momentum`, `trend_regime` | Moderate | 6 |
-| Hybrid Manager | 混合策略 | 多信号均衡分配 | Moderate | 6 |
-| On-chain Fundamentals | 链上基本面 | `opportunity_quality`, `volume_spike` | Conservative | 5 |
-| Polymarket Specialist | 预测市场 | `probability_edge`, `event_proximity` | Moderate | 8 |
+| Narrative Manager (`narrative-manager`) | 叙事驱动 | `narrative_strength`, `opportunity_quality` | Aggressive | 4 |
+| Event-driven Manager (`event-driven-manager`) | 事件驱动 | `catalyst_setup`, `event_proximity` | Moderate | 6 |
+| On-chain Fundamentals (`onchain-fundamentals-manager`) | 链上基本面 | `opportunity_quality`, `volume_spike` | Conservative | 5 |
+| Crypto CTA (`crypto-cta`) | 量价 CTA | OHLCV + ADX 趋势跟踪 (`strategyType: 'cta'`) | Moderate | 6 |
+| Prediction Market Manager (`prediction-market-manager`) | 预测市场 | `probability_edge`, `event_proximity` | Moderate | 8 |
 
 决策公式：
 
@@ -140,7 +139,7 @@ npm run pipeline
 | 3 | `POST /api/internal/normalize/opportunities` | 标准化机会数据 |
 | 4 | `POST /api/internal/ingest/news` | 采集新闻与情绪 |
 | 5 | `POST /api/internal/signals/recompute` | 重算信号 |
-| 6 | `POST /api/internal/managers/run` | 6 个经理独立决策 |
+| 6 | `POST /api/internal/managers/run` | 5 个经理独立决策 |
 | 7 | `POST /api/internal/portfolio/rebalance` | 组合再平衡 |
 | 8 | `POST /api/internal/performance/snapshot` | 记录 NAV |
 | 9 | `POST /api/internal/memos/generate` | 生成 AI Memo |
@@ -195,16 +194,9 @@ GET  /api/leaderboard/opportunities
 
 ### 当前 Demo 快照
 
-当前数据库中的 6 个经理均为正收益：
-
-| 经理 | 累计收益 |
-|------|---------|
-| Narrative Manager | +27.13% |
-| Event-driven Manager | +80.73% |
-| Quant Manager | +68.71% |
-| Hybrid Manager | +18.05% |
-| On-chain Fundamentals | +31.82% |
-| Polymarket Specialist | +101.58% |
+数据库 NAV 序列由 `POST /api/internal/backfill/history` 一次性回填，
+之后每天 03:07 UTC 由 `scripts/run-pipeline-cron.sh` 增量追加一行。
+最新业绩请直接查 `/api/leaderboard/managers` 或前端排行榜页。
 
 ### 项目结构
 
@@ -248,7 +240,7 @@ Nginx (443/80)
 
 ### Overview
 
-**Conviction Atlas** is a Web3 investment marketplace powered by **six autonomous AI fund managers**.  
+**Conviction Atlas** is a Web3 investment marketplace powered by **five autonomous AI fund managers**.  
 Each manager operates with an independent investment philosophy, signal mix, position logic, and performance curve. Users can buy manager shares with **TRON Nile Testnet USDT**, inspect rebalances, signals, memos, and compare long-term results.
 
 Core thesis:
@@ -261,14 +253,14 @@ This is not a single-answer recommendation engine. It is a market of comparable,
 
 - **Economic AI agents**: AI is treated as a service provider with pricing, performance, and delivery.
 - **Transparent decision-making**: Each output is backed by signals, conviction scores, rebalances, and research memos.
-- **Structured disagreement**: Six managers can disagree on the same asset, giving users comparative judgment instead of a single narrative.
+- **Structured disagreement**: Five managers can disagree on the same asset, giving users comparative judgment instead of a single narrative.
 - **On-chain payment loop**: Users pay with TRON USDT and receive access to an AI-managed service product.
 
 ### Core Capabilities
 
 - Unified ingestion from CoinGecko, Polymarket, and news providers
 - 10+ dimensional signal engine covering momentum, volume, narrative, catalysts, and probability edge
-- Independent decisions from six managers with different styles and thresholds
+- Independent decisions from five managers with different styles and thresholds
 - Portfolio rebalance, NAV snapshots, and LLM-generated memos
 - Share purchase, ratings, leaderboards, and side-by-side manager comparison
 
@@ -285,16 +277,15 @@ This is not a single-answer recommendation engine. It is a market of comparable,
 | Tooling | Nx Monorepo | Unified API + Web build flow |
 | Deployment | Nginx + systemd | Production serving and process management |
 
-### The Six AI Managers
+### The Five AI Managers
 
-| Manager | Style | Primary Bias | Risk | Max Positions |
+| Manager (slug) | Style | Primary Bias / Strategy | Risk | Max Positions |
 |------|------|------|------|------|
-| Narrative Manager | Narrative-driven | `narrative_strength`, `opportunity_quality` | Aggressive | 5 |
-| Event-driven Manager | Catalyst-driven | `catalyst_setup`, `event_proximity` | Moderate | 6 |
-| Quant Manager | Systematic | `market_momentum`, `trend_regime` | Moderate | 6 |
-| Hybrid Manager | Balanced | Cross-signal allocation | Moderate | 6 |
-| On-chain Fundamentals | On-chain quality | `opportunity_quality`, `volume_spike` | Conservative | 5 |
-| Polymarket Specialist | Prediction markets | `probability_edge`, `event_proximity` | Moderate | 8 |
+| Narrative Manager (`narrative-manager`) | Narrative-driven | `narrative_strength`, `opportunity_quality` | Aggressive | 4 |
+| Event-driven Manager (`event-driven-manager`) | Catalyst-driven | `catalyst_setup`, `event_proximity` | Moderate | 6 |
+| On-chain Fundamentals (`onchain-fundamentals-manager`) | On-chain quality | `opportunity_quality`, `volume_spike` | Conservative | 5 |
+| Crypto CTA (`crypto-cta`) | Price-volume CTA | OHLCV + ADX trend following (`strategyType: 'cta'`) | Moderate | 6 |
+| Prediction Market Manager (`prediction-market-manager`) | Prediction markets | `probability_edge`, `event_proximity` | Moderate | 8 |
 
 Decision rule:
 
@@ -400,16 +391,11 @@ GET  /api/leaderboard/opportunities
 
 ### Current Demo Snapshot
 
-All six managers in the current database are positive:
-
-| Manager | Cumulative Return |
-|------|------|
-| Narrative Manager | +27.13% |
-| Event-driven Manager | +80.73% |
-| Quant Manager | +68.71% |
-| Hybrid Manager | +18.05% |
-| On-chain Fundamentals | +31.82% |
-| Polymarket Specialist | +101.58% |
+NAV series is generated by a one-time call to
+`POST /api/internal/backfill/history` and then extended once a day at
+03:07 UTC by `scripts/run-pipeline-cron.sh`. Pull the live leaderboard
+from `/api/leaderboard/managers` or the frontend leaderboard page for
+up-to-date numbers.
 
 ### Project Structure
 
