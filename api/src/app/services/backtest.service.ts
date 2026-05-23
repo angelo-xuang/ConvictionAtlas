@@ -76,11 +76,9 @@ export class BacktestService {
       return { error: `Insufficient timestamps (${timestamps.length})` };
     }
 
-    // Clear old snapshots
-    await this.prisma.performanceSnapshot.deleteMany({});
-    await this.prisma.position.deleteMany({});
-    await this.prisma.portfolioSnapshot.deleteMany({});
-
+    // Idempotent backfill: rely on (managerId, dateKey) upserts below; the
+    // old destructive deleteMany is no longer needed and was the reason a
+    // single backtest run was the only NAV source on prod.
     const results: BacktestResult[] = [];
 
     for (const manager of managers) {
