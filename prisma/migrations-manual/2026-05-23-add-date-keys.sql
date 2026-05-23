@@ -5,6 +5,11 @@
 -- but SQLite doesn't support IF NOT EXISTS on columns, so check before running.
 -- Idempotency strategy: outer caller should verify columns absent.
 
+-- Foreign keys must be ON for the PortfolioSnapshot dedupe DELETE below to
+-- cascade into Position. The `sqlite3 db < file.sql` shell defaults this to
+-- OFF, which would leave orphaned position rows.
+PRAGMA foreign_keys = ON;
+
 BEGIN TRANSACTION;
 
 ALTER TABLE "ManagerDecision"    ADD COLUMN "dateKey" TEXT NOT NULL DEFAULT '';

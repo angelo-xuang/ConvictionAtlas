@@ -220,14 +220,17 @@ export class BacktestService {
       });
       const riskScore = riskScores.length ? round(average(riskScores), 4) : 0;
 
-      const portfolioDateKey = dateKey(new Date(currentTs));
+      // nav above is the value at end-of-interval (nextTs), so stamp the row
+      // with nextTs. Using currentTs would shift the whole series one day
+      // earlier and let the next daily snapshot double-count the return.
+      const portfolioDateKey = dateKey(new Date(nextTs));
       const portfolioData = {
         cashWeight,
         grossExposure: round(1 - cashWeight, 4),
         netExposure: round(1 - cashWeight - (cashWeight > 0.5 ? 0 : 0), 4),
         riskScore,
         nav,
-        computedAt: new Date(currentTs),
+        computedAt: new Date(nextTs),
       };
       const snapshot = await this.prisma.portfolioSnapshot.upsert({
         where: { managerId_dateKey: { managerId, dateKey: portfolioDateKey } },
@@ -258,7 +261,7 @@ export class BacktestService {
         drawdown,
         sharpe,
         hitRate,
-        computedAt: new Date(currentTs),
+        computedAt: new Date(nextTs),
       };
       await this.prisma.performanceSnapshot.upsert({
         where: { managerId_dateKey: { managerId, dateKey: portfolioDateKey } },

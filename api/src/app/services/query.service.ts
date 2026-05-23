@@ -136,14 +136,20 @@ export class QueryService {
         orderBy: { createdAt: 'desc' },
         take: 10,
       }),
-      this.prisma.managerDecision.findMany({
-        where: { managerId: manager.id },
-        orderBy: [{ convictionScore: 'desc' }, { targetWeight: 'desc' }],
-        take: 8,
-        include: {
-          opportunity: true,
-        },
-      }),
+      (async () => {
+        const latest = await this.prisma.managerDecision.findFirst({
+          where: { managerId: manager.id },
+          orderBy: { dateKey: 'desc' },
+          select: { dateKey: true },
+        });
+        if (!latest) return [];
+        return this.prisma.managerDecision.findMany({
+          where: { managerId: manager.id, dateKey: latest.dateKey },
+          orderBy: [{ convictionScore: 'desc' }, { targetWeight: 'desc' }],
+          take: 8,
+          include: { opportunity: true },
+        });
+      })(),
     ]);
     const { latestPerformance, latestPortfolio, analytics } = latestState;
 
@@ -368,11 +374,15 @@ export class QueryService {
 
   async getOpportunityManagers(idOrSlug: string) {
     const opportunity = await this.getOpportunityOrThrow(idOrSlug);
-    return this.prisma.managerDecision.findMany({
+    const latest = await this.prisma.managerDecision.findFirst({
       where: { opportunityId: opportunity.id },
-      include: {
-        manager: true,
-      },
+      orderBy: { dateKey: 'desc' },
+      select: { dateKey: true },
+    });
+    if (!latest) return [];
+    return this.prisma.managerDecision.findMany({
+      where: { opportunityId: opportunity.id, dateKey: latest.dateKey },
+      include: { manager: true },
       orderBy: { convictionScore: 'desc' },
     });
   }
