@@ -200,6 +200,7 @@ model ManagerDecision {
   id              String      @id @default(cuid())
   managerId       String
   opportunityId   String
+  dateKey         String
   direction       Direction
   convictionScore Float
   targetWeight    Float
@@ -209,13 +210,16 @@ model ManagerDecision {
   manager         Manager     @relation(fields: [managerId], references: [id], onDelete: Cascade)
   opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
+  @@unique([managerId, opportunityId, dateKey])
   @@index([managerId, computedAt])
   @@index([opportunityId, computedAt])
+  @@index([managerId, dateKey])
 }
 
 model PortfolioSnapshot {
   id              String                @id @default(cuid())
   managerId        String
+  dateKey          String
   cashWeight       Float
   grossExposure    Float
   netExposure      Float
@@ -227,6 +231,7 @@ model PortfolioSnapshot {
   positions        Position[]
   performanceEntry PerformanceSnapshot?
 
+  @@unique([managerId, dateKey])
   @@index([managerId, computedAt])
 }
 
@@ -249,6 +254,7 @@ model PerformanceSnapshot {
   id                String            @id @default(cuid())
   managerId         String
   portfolioSnapshotId String?         @unique
+  dateKey           String
   nav               Float
   dailyReturn       Float
   cumulativeReturn  Float
@@ -260,6 +266,7 @@ model PerformanceSnapshot {
   manager           Manager           @relation(fields: [managerId], references: [id], onDelete: Cascade)
   portfolioSnapshot PortfolioSnapshot? @relation(fields: [portfolioSnapshotId], references: [id], onDelete: SetNull)
 
+  @@unique([managerId, dateKey])
   @@index([managerId, computedAt])
 }
 

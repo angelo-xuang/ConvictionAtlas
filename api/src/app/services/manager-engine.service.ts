@@ -1,7 +1,7 @@
 import { Direction } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { getManagerBlueprint } from '../core/manager-blueprints';
-import { clamp, round, serializeJson } from '../core/helpers';
+import { clamp, dateKey, round, serializeJson } from '../core/helpers';
 import { isCurrentInvestableOpportunity } from '../core/opportunity-universe';
 import { PrismaService } from '../prisma/prisma.service';
 import { computeAllIndicators, type CandleLike } from '../core/technical-indicators';
@@ -11,9 +11,8 @@ import { ctaScore } from '../core/scoring/cta-scoring';
 export class ManagerEngineService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async runManagers() {
-    await this.prisma.managerDecision.deleteMany({});
-
+  async runManagers(asOf: Date = new Date()) {
+    const todayKey = dateKey(asOf);
     const managers = await this.prisma.manager.findMany();
     const opportunities = (
       await this.prisma.opportunity.findMany({
@@ -28,8 +27,18 @@ export class ManagerEngineService {
       })
     ).filter((opportunity) => isCurrentInvestableOpportunity(opportunity));
 
-    const computedAt = new Date();
-    const rows = [];
+    const computedAt = asOf;
+    const rows: Array<{
+      managerId: string;
+      opportunityId: string;
+      dateKey: string;
+      direction: Direction;
+      convictionScore: number;
+      targetWeight: number;
+      rationale: string;
+      computedAt: Date;
+      metadata: string;
+    }> = [];
 
     for (const manager of managers) {
       const blueprint = getManagerBlueprint(manager.slug);
@@ -57,6 +66,7 @@ export class ManagerEngineService {
         rows.push({
           managerId: manager.id,
           opportunityId: opportunity.id,
+          dateKey: todayKey,
           direction,
           convictionScore: round(result.direction === 'NEUTRAL' ? 0 : result.score, 4),
           targetWeight: round(result.positionSize, 4),
@@ -116,6 +126,7 @@ export class ManagerEngineService {
         rows.push({
           managerId: manager.id,
           opportunityId: opportunity.id,
+          dateKey: todayKey,
           direction,
           convictionScore: round(rawScore, 4),
           targetWeight: round(targetWeight, 4),
@@ -139,14 +150,28 @@ export class ManagerEngineService {
       }
     }
 
-    if (rows.length) {
-      await this.prisma.managerDecision.createMany({ data: rows });
+    // Incremental upsert by (managerId, opportunityId, dateKey).
+    // Same-day re-runs overwrite the latest decision; previous days are preserved.
+    for (const row of rows) {
+      const { managerId, opportunityId, dateKey: rowDateKey, ...rest } = row;
+      await this.prisma.managerDecision.upsert({
+        where: {
+          managerId_opportunityId_dateKey: {
+            managerId,
+            opportunityId,
+            dateKey: rowDateKey,
+          },
+        },
+        create: { managerId, opportunityId, dateKey: rowDateKey, ...rest },
+        update: rest,
+      });
     }
 
     return {
       managers: managers.length,
       opportunities: opportunities.length,
       decisions: rows.length,
+      dateKey: todayKey,
       computedAt,
     };
   }

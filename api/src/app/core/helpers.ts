@@ -62,6 +62,11 @@ export function daysUntil(date: Date | null | undefined): number | null {
   return (date.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
 }
 
+export function dateKey(input: Date | number | string = new Date()): string {
+  const d = input instanceof Date ? input : new Date(input);
+  return d.toISOString().slice(0, 10);
+}
+
 export function standardDeviation(values: number[]): number {
   if (values.length <= 1) {
     return 0;

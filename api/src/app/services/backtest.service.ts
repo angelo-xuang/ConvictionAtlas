@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   average,
   clamp,
+  dateKey,
   parseJson,
   round,
   standardDeviation,
@@ -224,18 +225,26 @@ export class BacktestService {
       });
       const riskScore = riskScores.length ? round(average(riskScores), 4) : 0;
 
-      // Persist snapshot
-      const snapshot = await this.prisma.portfolioSnapshot.create({
-        data: {
-          managerId,
-          cashWeight,
-          grossExposure: round(1 - cashWeight, 4),
-          netExposure: round(1 - cashWeight - (cashWeight > 0.5 ? 0 : 0), 4),
-          riskScore,
-          nav,
-        } as any,
+      // Persist snapshot — upsert by (managerId, dateKey) so multiple replays in the
+      // same day are idempotent.
+      const portfolioDateKey = dateKey(new Date(currentTs));
+      const portfolioData = {
+        cashWeight,
+        grossExposure: round(1 - cashWeight, 4),
+        netExposure: round(1 - cashWeight - (cashWeight > 0.5 ? 0 : 0), 4),
+        riskScore,
+        nav,
+        computedAt: new Date(currentTs),
+      };
+      const snapshot = await this.prisma.portfolioSnapshot.upsert({
+        where: { managerId_dateKey: { managerId, dateKey: portfolioDateKey } },
+        create: { managerId, dateKey: portfolioDateKey, ...portfolioData },
+        update: portfolioData,
       });
 
+      await this.prisma.position.deleteMany({
+        where: { portfolioSnapshotId: snapshot.id },
+      });
       if (positionData.length) {
         await this.prisma.position.createMany({
           data: positionData.map((p) => ({
@@ -248,17 +257,20 @@ export class BacktestService {
         });
       }
 
-      await this.prisma.performanceSnapshot.create({
-        data: {
-          portfolioSnapshotId: snapshot.id,
-          managerId,
-          nav,
-          dailyReturn: round(intervalReturn, 6),
-          cumulativeReturn,
-          drawdown,
-          sharpe,
-          hitRate,
-        } as any,
+      const perfData = {
+        portfolioSnapshotId: snapshot.id,
+        nav,
+        dailyReturn: round(intervalReturn, 6),
+        cumulativeReturn,
+        drawdown,
+        sharpe,
+        hitRate,
+        computedAt: new Date(currentTs),
+      };
+      await this.prisma.performanceSnapshot.upsert({
+        where: { managerId_dateKey: { managerId, dateKey: portfolioDateKey } },
+        create: { managerId, dateKey: portfolioDateKey, ...perfData },
+        update: perfData,
       });
     }
 
