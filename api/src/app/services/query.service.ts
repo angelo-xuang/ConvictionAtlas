@@ -665,7 +665,17 @@ export class QueryService {
       managerSlug,
       replayUniverse,
     );
-    let series = backtestSeries.length >= 2 ? backtestSeries : snapshotSeries;
+    // Persisted snapshot series wins once it has a meaningful history
+    // (>= 30 days). Cron writes one row per day after the historical
+    // /backfill/history seed, so this is what "real-time tracking" reads.
+    // Fall back to the in-memory walk-forward backtest only when the DB
+    // hasn't been seeded yet (fresh deploy).
+    let series =
+      snapshotSeries.length >= 30
+        ? snapshotSeries
+        : backtestSeries.length >= 2
+          ? backtestSeries
+          : snapshotSeries;
     // When we only have a single data point (no history), generate a synthetic
     // 90-day walk to give the front-end a meaningful chart.
     if (series.length < 3) {
