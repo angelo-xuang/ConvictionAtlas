@@ -5,6 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SourceKind } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CryptoDataBridgeService } from './crypto-data-bridge.service';
 import {
   average,
   parseJson,
@@ -120,6 +121,7 @@ export class SourceIngestionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly cryptoDataBridge: CryptoDataBridgeService,
   ) {}
 
   async runBootstrap() {
@@ -1455,15 +1457,81 @@ export class SourceIngestionService {
    * Rate limited: 2s between requests, 60s backoff on 429.
    */
   async ingestOHLCV(timeframe: string = '1d', days: number = 180) {
-    const baseUrl = this.configService.get<string>('COINGECKO_BASE_URL')!;
     const opportunities = await this.prisma.opportunity.findMany({
       where: { type: 'TOKEN', status: 'active' },
     });
 
-    let ingested = 0;
+    let bridgeIngested = 0;
+    let bridgeCandles = 0;
+    let coinGeckoIngested = 0;
     const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+    const sinceMs = Date.now() - days * 24 * 60 * 60 * 1000;
+
+    const fallbacks: typeof opportunities = [];
 
     for (const opp of opportunities) {
+      if (!(await this.cryptoDataBridge.isAvailable(opp.slug))) {
+        fallbacks.push(opp);
+        continue;
+      }
+
+      try {
+        const rows = await this.cryptoDataBridge.fetchOhlcv(
+          opp.slug,
+          timeframe,
+          sinceMs,
+        );
+        if (!rows.length) {
+          fallbacks.push(opp);
+          continue;
+        }
+        await this.prisma.$transaction(
+          rows.map((row) =>
+            this.prisma.candle.upsert({
+              where: {
+                opportunityId_timeframe_timestamp: {
+                  opportunityId: opp.id,
+                  timeframe,
+                  timestamp: row.ts,
+                },
+              },
+              update: {
+                open: row.open,
+                high: row.high,
+                low: row.low,
+                close: row.close,
+                volume: row.volume,
+              },
+              create: {
+                opportunityId: opp.id,
+                timeframe,
+                timestamp: row.ts,
+                open: row.open,
+                high: row.high,
+                low: row.low,
+                close: row.close,
+                volume: row.volume,
+              },
+            }),
+          ),
+        );
+        bridgeIngested += 1;
+        bridgeCandles += rows.length;
+        console.log(
+          `OHLCV bridge: ${opp.slug} -> ${rows.length} ${timeframe} candles`,
+        );
+      } catch (error: any) {
+        console.warn(
+          `OHLCV bridge failed for ${opp.slug}:`,
+          error?.message ?? error,
+        );
+        fallbacks.push(opp);
+      }
+    }
+
+    // Legacy CoinGecko fallback for slugs without a crypto-data mapping.
+    const baseUrl = this.configService.get<string>('COINGECKO_BASE_URL')!;
+    for (const opp of fallbacks) {
       const coinId = opp.externalKey.replace('coingecko:', '');
       if (!coinId || opp.externalKey === opp.slug) continue;
 
@@ -1472,7 +1540,7 @@ export class SourceIngestionService {
       url.searchParams.set('days', String(Math.min(days, 365)));
 
       try {
-        if (ingested > 0) await sleep(2000);
+        if (coinGeckoIngested > 0) await sleep(2000);
 
         const candles = await this.fetchJson<number[][]>(url.toString());
         if (!Array.isArray(candles) || candles.length === 0) continue;
@@ -1502,8 +1570,8 @@ export class SourceIngestionService {
             },
           });
         }
-        ingested++;
-        console.log(`OHLCV: ${coinId} -> ${candles.length} candles`);
+        coinGeckoIngested++;
+        console.log(`OHLCV CoinGecko: ${coinId} -> ${candles.length} candles`);
       } catch (error: any) {
         console.warn(`OHLCV ingest failed for ${coinId}:`, error?.message);
         if (error?.response?.status === 429) {
@@ -1513,7 +1581,14 @@ export class SourceIngestionService {
       }
     }
 
-    return { source: 'ohlcv', ingested, timeframe, candlesPerAsset: days };
+    return {
+      source: 'ohlcv',
+      timeframe,
+      candlesPerAsset: days,
+      bridgeIngested,
+      bridgeCandles,
+      coinGeckoIngested,
+    };
   }
 
   private buildUrl(baseUrl: string, path: string) {
