@@ -1,0 +1,10 @@
+# Conviction Atlas production crontab.
+# Install with: `crontab deploy/crontab.prod.txt` after SSHing as root.
+#
+# Times are server-local UTC. 03:07 UTC = 11:07 Asia/Shanghai.
+# Daily incremental: ingest + decide + rebalance + snapshot + health check.
+# MAILTO surfaces failures via the system mailer; set it to an address you
+# actually read or leave empty to fall back to log inspection.
+MAILTO=""
+
+7 3 * * * /root/workspace/ConvictionAtlas/scripts/run-pipeline-cron.sh >> /var/log/conviction-atlas-pipeline.log 2>&1
