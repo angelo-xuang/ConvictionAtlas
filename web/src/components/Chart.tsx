@@ -97,6 +97,7 @@ export function PerfLine({
     },
     yAxis: {
       type: 'value',
+      scale: true,
       splitLine: { lineStyle: { color: '#e5e7eb' } },
       axisLabel: {
         color: '#9ca3af',
