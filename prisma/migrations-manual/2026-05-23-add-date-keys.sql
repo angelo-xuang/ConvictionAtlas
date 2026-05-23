@@ -14,15 +14,15 @@ ALTER TABLE "PerformanceSnapshot" ADD COLUMN "dateKey" TEXT NOT NULL DEFAULT '';
 -- Backfill dateKey from existing computedAt (UTC YYYY-MM-DD).
 -- Prisma stores DateTime as ISO-8601 string in SQLite, so substr(0, 10) extracts the date.
 UPDATE "ManagerDecision"
-   SET "dateKey" = substr("computedAt", 1, 10)
+   SET "dateKey" = strftime('%Y-%m-%d', "computedAt" / 1000, 'unixepoch')
  WHERE "dateKey" = '';
 
 UPDATE "PortfolioSnapshot"
-   SET "dateKey" = substr("computedAt", 1, 10)
+   SET "dateKey" = strftime('%Y-%m-%d', "computedAt" / 1000, 'unixepoch')
  WHERE "dateKey" = '';
 
 UPDATE "PerformanceSnapshot"
-   SET "dateKey" = substr("computedAt", 1, 10)
+   SET "dateKey" = strftime('%Y-%m-%d', "computedAt" / 1000, 'unixepoch')
  WHERE "dateKey" = '';
 
 -- Dedupe before adding unique constraints: keep the latest row per (manager, dateKey) tuple.
