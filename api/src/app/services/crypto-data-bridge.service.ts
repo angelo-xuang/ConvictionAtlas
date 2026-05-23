@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DuckDBInstance, DuckDBConnection } from '@duckdb/node-api';
 
 export interface BridgeOhlcvRow {
@@ -10,7 +11,7 @@ export interface BridgeOhlcvRow {
   volume: number;
 }
 
-const CRYPTO_DATA_DUCKDB = process.env.CRYPTO_DATA_DUCKDB || '/data/crypto-data/meta.duckdb';
+const DEFAULT_DUCKDB_PATH = '/data/crypto-data/meta.duckdb';
 
 // ConvictionAtlas opportunity slug -> crypto-data symbol (Binance spot, USDT-quoted).
 // Tokens not in this map fall back to the legacy CoinGecko path.
@@ -34,6 +35,8 @@ const SUPPORTED_TIMEFRAMES = new Set(['1d', '1h', '5m', '1m']);
 @Injectable()
 export class CryptoDataBridgeService {
   private readonly logger = new Logger(CryptoDataBridgeService.name);
+
+  constructor(private readonly configService: ConfigService) {}
 
   resolveSymbol(slug: string): string | null {
     return SLUG_TO_BINANCE_SYMBOL[slug] ?? null;
@@ -111,22 +114,41 @@ export class CryptoDataBridgeService {
     }));
   }
 
+  private duckdbPath(): string {
+    return (
+      this.configService.get<string>('CRYPTO_DATA_DUCKDB') ?? DEFAULT_DUCKDB_PATH
+    );
+  }
+
   /**
    * Open a short-lived DuckDB connection so we pick up any meta.duckdb
    * atomic-rename done by crypto-data's `build_views.py`. Holding a
    * long-lived connection would pin the old inode after a swap.
+   * Both the connection and the instance must be closed in `finally` —
+   * the instance owns the native file handle and isn't released by GC
+   * in time on a long-running API process.
    */
   private async withConnection<T>(
     fn: (connection: DuckDBConnection) => Promise<T>,
   ): Promise<T> {
-    const instance = await DuckDBInstance.create(CRYPTO_DATA_DUCKDB, {
+    const instance = await DuckDBInstance.create(this.duckdbPath(), {
       access_mode: 'READ_ONLY',
     });
-    const connection = await instance.connect();
+    let connection: DuckDBConnection | null = null;
     try {
+      connection = await instance.connect();
       return await fn(connection);
     } finally {
-      connection.closeSync();
+      try {
+        connection?.closeSync();
+      } catch (err) {
+        this.logger.warn(`connection.closeSync failed: ${(err as Error).message}`);
+      }
+      try {
+        instance.closeSync();
+      } catch (err) {
+        this.logger.warn(`instance.closeSync failed: ${(err as Error).message}`);
+      }
     }
   }
 }
