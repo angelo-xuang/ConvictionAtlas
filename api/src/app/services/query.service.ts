@@ -18,6 +18,14 @@ import {
   isCurrentInvestableOpportunity,
 } from '../core/opportunity-universe';
 import { TronPaymentService } from './tron-payment.service';
+import axios from 'axios';
+
+// equity-agent(后端基座)只读出口;CA 作为前端窗口在读取层聚合它的经理。
+const EQUITY_AGENT_STATE_URL =
+  process.env.EQUITY_AGENT_STATE_URL ?? 'http://127.0.0.1:3010/state';
+// 进程级 TTL 缓存:详情页一次会触发多次聚合,缓存避免对 sidecar fanout;失败 fail-open 返回上次缓存。
+let EQUITY_CACHE: { at: number; data: any[] } | null = null;
+const EQUITY_CACHE_TTL_MS = 15000;
 
 type HistoryPointLike = {
   pointAt: Date;
@@ -77,7 +85,7 @@ export class QueryService {
       },
     });
 
-    return Promise.all(
+    const cryptoSummaries = await Promise.all(
       managers.map(async (manager) => {
         const { latestPortfolio, analytics } = await this.getLatestManagerState(
           manager,
@@ -125,9 +133,184 @@ export class QueryService {
         };
       }),
     );
+
+    const equitySummaries = (await this.fetchEquityManagers()).map((m) =>
+      this.mapEquityManagerSummary(m),
+    );
+    return [...cryptoSummaries, ...equitySummaries];
+  }
+
+  /** equity-agent 契约 → CA ManagerSummary DTO(镜像 crypto 的 key,防前端渲染崩)。 */
+  private mapEquityManagerSummary(m: any) {
+    const perf: any[] = Array.isArray(m?.performance) ? m.performance : [];
+    const last = perf.length ? perf[perf.length - 1] : {};
+    const positions: any[] = Array.isArray(m?.positions) ? m.positions : [];
+    const gross = positions.reduce((s, p) => s + (Number(p?.weight) || 0), 0);
+    const markets = Array.isArray(m?.markets) ? m.markets : [];
+    return {
+      id: m?.slug,
+      slug: m?.slug,
+      name: m?.label ?? m?.slug,
+      style: '主观 / 规则',
+      riskProfile: markets.join('/') || '—',
+      description: `${m?.asset_domain ?? 'equity'} · ${markets.join('/') || '—'}`,
+      pricingSummary: null,
+      latestNav: Number(last?.nav ?? 100),
+      dailyReturn: Number(last?.daily_return ?? 0),
+      cumulativeReturn: Number(last?.cum_return ?? 0),
+      drawdown: Number(last?.drawdown ?? 0),
+      sharpe: Number(last?.sharpe ?? 0),
+      hitRate: Number(last?.hit_rate ?? 0),
+      grossExposure: round(gross, 4),
+      cashWeight: round(Math.max(0, 1 - gross), 4),
+      riskScore: 0,
+      averageRating: null,
+      topPositions: positions.map((p) => ({
+        id: p?.symbol,
+        title: p?.name ?? p?.symbol,
+        slug: p?.symbol,
+        weight: Number(p?.weight) || 0,
+        imageUrl: null,
+        symbol: p?.symbol,
+        sourceKind: null,
+        priceChange24h: Number(p?.pnl_pct ?? 0) * 100,
+      })),
+      performanceSeries: perf
+        .filter((p) => p?.date)
+        .map((p) => ({
+          pointAt: `${p.date}T00:00:00.000Z`,
+          nav: Number(p.nav),
+          cumulativeReturn: Number(p.cum_return ?? 0),
+        })),
+      signalMix: [],
+      blueprint: {
+        strategyType: m?.strategy_type ?? 'rule',
+        opportunityTypeBias: {},
+        bullishThreshold: 0,
+        bearishThreshold: 0,
+        cashFloor: round(Math.max(0, 1 - gross), 4),
+        maxPositions: positions.length || 0,
+        ctaParams: undefined,
+      },
+      pricingPlans: [],
+    };
+  }
+
+  private async findEquityManager(slug: string): Promise<any | null> {
+    const managers = await this.fetchEquityManagers();
+    return managers.find((m) => m?.slug === slug) ?? null;
+  }
+
+  private mapEquityPerfSeries(m: any) {
+    const perf: any[] = Array.isArray(m?.performance) ? m.performance : [];
+    return perf
+      .filter((p) => p?.date)
+      .map((p) => ({
+        pointAt: `${p.date}T00:00:00.000Z`,
+        nav: Number(p.nav),
+        cumulativeReturn: Number(p.cum_return ?? 0),
+      }));
+  }
+
+  private mapEquityPortfolio(m: any) {
+    const positions: any[] = Array.isArray(m?.positions) ? m.positions : [];
+    const gross = positions.reduce((s, p) => s + (Number(p?.weight) || 0), 0);
+    const perf: any[] = Array.isArray(m?.performance) ? m.performance : [];
+    const last = perf.length ? perf[perf.length - 1] : {};
+    return {
+      id: `${m?.slug}-portfolio`,
+      managerId: m?.slug,
+      cashWeight: round(Math.max(0, 1 - gross), 4),
+      grossExposure: round(gross, 4),
+      netExposure: round(gross, 4),
+      riskScore: 0,
+      nav: Number(last?.nav ?? 100),
+      metadata: '{}',
+      computedAt: new Date().toISOString(),
+      positions: positions.map((p) => ({
+        id: `${m?.slug}-${p?.symbol}`,
+        portfolioSnapshotId: `${m?.slug}-portfolio`,
+        opportunityId: p?.symbol,
+        weight: Number(p?.weight) || 0,
+        convictionScore: 0,
+        entryPrice: Number(p?.entry_price ?? 0),
+        note: p?.note ?? '',
+        opportunity: {
+          id: p?.symbol,
+          slug: p?.symbol,
+          title: p?.name ?? p?.symbol,
+          summary: p?.note ?? '',
+          symbol: p?.symbol,
+          imageUrl: null,
+          sourceKind: null,
+          priceChange24h: Number(p?.pnl_pct ?? 0) * 100,
+          currentPrice: Number(p?.last_price ?? 0),
+        },
+      })),
+    };
+  }
+
+  private mapEquityManagerDetail(m: any) {
+    const summary = this.mapEquityManagerSummary(m);
+    const markets = Array.isArray(m?.markets) ? m.markets : [];
+    const now = new Date().toISOString();
+    return {
+      id: m?.slug,
+      slug: m?.slug,
+      name: m?.label ?? m?.slug,
+      description: summary.description,
+      style: '主观 / 规则',
+      riskProfile: markets.join('/') || '—',
+      rebalanceCadence: '每日',
+      memoStyle: '规则触发',
+      universe: markets.join('/') || '—',
+      pricingSummary: null,
+      metadata: {},
+      createdAt: now,
+      updatedAt: now,
+      pricingPlans: [],
+      latestPerformance: null,
+      latestPortfolio: this.mapEquityPortfolio(m),
+      reviews: [],
+      ratingAverage: null,
+      performanceSeries: summary.performanceSeries,
+      derivedPerformance: {
+        nav: summary.latestNav,
+        dailyReturn: summary.dailyReturn,
+        cumulativeReturn: summary.cumulativeReturn,
+        drawdown: summary.drawdown,
+        sharpe: summary.sharpe,
+        hitRate: summary.hitRate,
+        lookbackDays: summary.performanceSeries.length,
+      },
+      signalMix: [],
+      blueprint: summary.blueprint,
+      latestDecisions: (Array.isArray(m?.positions) ? m.positions : []).map(
+        (p: any, i: number) => ({
+          id: `${m?.slug}-dec-${i}`,
+          direction: 'BULLISH' as const,
+          convictionScore: Number(p?.weight) || 0,
+          targetWeight: Number(p?.weight) || 0,
+          rationale: p?.note || '规则触发持仓',
+          opportunity: {
+            id: p?.symbol,
+            slug: p?.symbol,
+            title: p?.name ?? p?.symbol,
+            summary: p?.note ?? '',
+            imageUrl: null,
+            symbol: p?.symbol,
+            sourceKind: null,
+            priceChange24h: Number(p?.pnl_pct ?? 0) * 100,
+            currentPrice: Number(p?.last_price ?? 0),
+          },
+        }),
+      ),
+    };
   }
 
   async getManager(slug: string) {
+    const eq = await this.findEquityManager(slug);
+    if (eq) return this.mapEquityManagerDetail(eq);
     const manager = await this.getManagerOrThrow(slug);
     const [latestState, reviews, latestDecisions] = await Promise.all([
       this.getLatestManagerState(manager),
@@ -207,12 +390,16 @@ export class QueryService {
   }
 
   async getManagerPerformance(slug: string) {
+    const eq = await this.findEquityManager(slug);
+    if (eq) return this.mapEquityPerfSeries(eq);
     const manager = await this.getManagerOrThrow(slug);
     const { analytics } = await this.getLatestManagerState(manager);
     return analytics.series;
   }
 
   async getManagerPortfolio(slug: string) {
+    const eq = await this.findEquityManager(slug);
+    if (eq) return this.mapEquityPortfolio(eq);
     const manager = await this.getManagerOrThrow(slug);
     return this.prisma.portfolioSnapshot.findFirst({
       where: { managerId: manager.id },
@@ -229,6 +416,8 @@ export class QueryService {
   }
 
   async getManagerRebalances(slug: string) {
+    const eq = await this.findEquityManager(slug);
+    if (eq) return [];
     const manager = await this.getManagerOrThrow(slug);
     const snapshots = await this.prisma.portfolioSnapshot.findMany({
       where: { managerId: manager.id },
@@ -275,6 +464,38 @@ export class QueryService {
   }
 
   async getManagerMemos(slug: string) {
+    const eq = await this.findEquityManager(slug);
+    if (eq) {
+      const now = new Date().toISOString();
+      const positions: any[] = Array.isArray(eq?.positions) ? eq.positions : [];
+      return positions
+        .filter((p) => p?.note)
+        .map((p, i) => ({
+          id: `${slug}-memo-${i}`,
+          managerId: slug,
+          opportunityId: p?.symbol,
+          title: `${p?.name ?? p?.symbol} · 持仓逻辑`,
+          summary: p.note,
+          content: `**${p?.name ?? p?.symbol}**(权重 ${(
+            (Number(p?.weight) || 0) * 100
+          ).toFixed(1)}%,浮动 ${((Number(p?.pnl_pct) || 0) * 100).toFixed(
+            2,
+          )}%)\n\n${p.note}`,
+          isPremium: false,
+          accessTier: 'public',
+          generatedBy: 'rule',
+          createdAt: now,
+          opportunity: {
+            id: p?.symbol,
+            slug: p?.symbol,
+            title: p?.name ?? p?.symbol,
+            symbol: p?.symbol,
+            imageUrl: null,
+            sourceKind: null,
+            priceChange24h: Number(p?.pnl_pct ?? 0) * 100,
+          },
+        }));
+    }
     const manager = await this.getManagerOrThrow(slug);
     return this.prisma.memo.findMany({
       where: { managerId: manager.id },
@@ -287,6 +508,8 @@ export class QueryService {
   }
 
   async getManagerReviews(slug: string) {
+    const eq = await this.findEquityManager(slug);
+    if (eq) return { averageRating: null, total: 0, reviews: [] };
     const manager = await this.getManagerOrThrow(slug);
     const reviews = await this.prisma.review.findMany({
       where: { managerId: manager.id },
@@ -547,7 +770,57 @@ export class QueryService {
       }),
     );
 
-    return rows.sort((left, right) => right.nav - left.nav);
+    // 聚合 equity-agent 基座的经理(防御性:拉不到则只返回 crypto,绝不弄崩 CA)
+    const equityRows = (await this.fetchEquityManagers()).map((m) =>
+      this.mapEquityLeaderboardRow(m),
+    );
+
+    return [...rows, ...equityRows].sort((left, right) => right.nav - left.nav);
+  }
+
+  /** 拉 equity-agent /state 的经理列表;任何错误 → [](不影响 CA 自身)。 */
+  private async fetchEquityManagers(): Promise<any[]> {
+    const now = Date.now();
+    if (EQUITY_CACHE && now - EQUITY_CACHE.at < EQUITY_CACHE_TTL_MS) {
+      return EQUITY_CACHE.data;
+    }
+    try {
+      const res = await axios.get(EQUITY_AGENT_STATE_URL, { timeout: 1500 });
+      const managers = Array.isArray(res.data?.managers) ? res.data.managers : [];
+      EQUITY_CACHE = { at: now, data: managers };
+      return managers;
+    } catch {
+      return EQUITY_CACHE?.data ?? []; // fail-open:不可达不拖垮 CA,用上次缓存或空
+    }
+  }
+
+  /** equity-agent 契约 → CA leaderboard DTO。 */
+  private mapEquityLeaderboardRow(m: any) {
+    const perf: any[] = Array.isArray(m?.performance) ? m.performance : [];
+    const last = perf.length ? perf[perf.length - 1] : {};
+    const positions: any[] = Array.isArray(m?.positions) ? m.positions : [];
+    const gross = positions.reduce(
+      (sum, p) => sum + (Number(p?.weight) || 0),
+      0,
+    );
+    return {
+      slug: m?.slug,
+      name: m?.label ?? m?.slug,
+      nav: Number(last?.nav ?? 100),
+      cumulativeReturn: Number(last?.cum_return ?? 0),
+      dailyReturn: Number(last?.daily_return ?? 0),
+      sharpe: Number(last?.sharpe ?? 0),
+      hitRate: Number(last?.hit_rate ?? 0),
+      grossExposure: round(gross, 4),
+      averageRating: null,
+      performanceSeries: perf
+        .filter((p) => p?.date)
+        .map((p) => ({
+          pointAt: `${p.date}T00:00:00.000Z`,
+          nav: Number(p.nav),
+          cumulativeReturn: Number(p.cum_return ?? 0),
+        })),
+    };
   }
 
   async getOpportunityLeaderboard() {
