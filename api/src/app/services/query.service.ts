@@ -66,6 +66,26 @@ const EQUITY_STRATEGY_PROFILES: Record<
       { label: '本金', value: '500 万 CNY(净值看百分比)' },
     ],
   },
+  'factor-lab-lowvol-cn': {
+    style: '量化 · 低波防御',
+    riskLabel: '满仓 · 低回撤',
+    rebalanceCadence: '周频 · 每周一',
+    universe: 'A股流动性前1500',
+    memoStyle: '规则驱动 · 无人工干预',
+    description:
+      '在A股流动性前1500的可投资域内, 按过去60日收益波动率选出波动最低的50只等权持有, 周频调仓。天然规避高波动垃圾股, 危机年/熊市跑赢大盘、疯牛年让出部分涨幅, 全期对大盘Pareto占优(更高收益+更浅回撤)。参数±20%无悬崖, 泛化性经回测验证。',
+    signalMix: [{ name: '低波因子(60日波动率)', weight: 1.0 }],
+    playbook: [
+      { label: '信号源', value: '低波因子 = −过去60日收益波动率(每日横截面排名)' },
+      { label: '选股池', value: 'A股流动性前1500 + 上市>120日 + 当日可买(非停牌非涨停)' },
+      { label: '选股', value: '池内波动率最低的 top 50, 等权' },
+      { label: '调仓频率', value: '周频(每周一); 日内仅做 −20% 灾难止损' },
+      { label: '成本', value: '30bp 单边, 已计入净值' },
+      { label: '定位', value: '防御型——危机年/熊市跑赢大盘, 疯牛年让涨, 全期对大盘Pareto占优' },
+      { label: '泛化验证', value: '参数±20%(窗口/持仓数)无悬崖, 成本/调仓不敏感, 逐年IC 7/7同号' },
+      { label: '本金', value: '500 万 CNY(净值看百分比)' },
+    ],
+  },
 };
 
 type HistoryPointLike = {
