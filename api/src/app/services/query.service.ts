@@ -27,6 +27,47 @@ const EQUITY_AGENT_STATE_URL =
 let EQUITY_CACHE: { at: number; data: any[] } | null = null;
 const EQUITY_CACHE_TTL_MS = 15000;
 
+// equity 经理策略档案:覆盖默认"主观/规则/每日"。用于前端把调仓周期、信号构成、
+// 持仓规则等参数写清楚(确定性量化经理)。未列出的 equity 经理沿用默认值。
+const EQUITY_STRATEGY_PROFILES: Record<
+  string,
+  {
+    style: string;
+    riskLabel: string;
+    rebalanceCadence: string;
+    universe: string;
+    memoStyle: string;
+    description: string;
+    signalMix: { name: string; weight: number }[];
+    playbook: { label: string; value: string }[];
+  }
+> = {
+  'factor-lab-cn': {
+    style: '量化 · 多因子合成',
+    riskLabel: '满仓 · 中高波动',
+    rebalanceCadence: '周频 · 每周一',
+    universe: 'A股全市场',
+    memoStyle: '规则驱动 · 无人工干预',
+    description:
+      '全A股约 250 个量价因子(WorldQuant Alpha101 + 国泰君安 Alpha191)按各自 IC 方向投票,取共识打分最高的标的,经生存否决(剔除 ST / 涨停买不进 / 流动性不足)后按 score_tilt 加权建仓,周频调仓、单边成本 30bp、跌破 −20% 灾难线即平。',
+    signalMix: [
+      { name: '国泰君安 Alpha191', weight: 0.6 },
+      { name: 'WorldQuant Alpha101', weight: 0.4 },
+    ],
+    playbook: [
+      { label: '信号源', value: '全A股约 250 因子共识投票(Alpha101 + Alpha191,按各自 IC 方向)' },
+      { label: '调仓频率', value: '周频(每周一);日内仅做 −20% 灾难止损,不择时' },
+      { label: '选股', value: '共识打分 top 30 只' },
+      { label: '加权', value: 'score_tilt——共识票数越多权重越大(成比例)' },
+      { label: '约束', value: '单股 ≤10%、行业 ≤30%,超限水填削平' },
+      { label: '生存否决', value: '剔除 ST / 涨停无法买入 / 流动性不足(铁律5)' },
+      { label: '成本', value: '30bp 单边,已计入净值' },
+      { label: '止损', value: '−20% 灾难线,每日检查' },
+      { label: '本金', value: '500 万 CNY(净值看百分比)' },
+    ],
+  },
+};
+
 type HistoryPointLike = {
   pointAt: Date;
   price: number;
@@ -147,13 +188,16 @@ export class QueryService {
     const positions: any[] = Array.isArray(m?.positions) ? m.positions : [];
     const gross = positions.reduce((s, p) => s + (Number(p?.weight) || 0), 0);
     const markets = Array.isArray(m?.markets) ? m.markets : [];
+    const profile = EQUITY_STRATEGY_PROFILES[m?.slug];
     return {
       id: m?.slug,
       slug: m?.slug,
       name: m?.label ?? m?.slug,
-      style: '主观 / 规则',
-      riskProfile: markets.join('/') || '—',
-      description: `${m?.asset_domain ?? 'equity'} · ${markets.join('/') || '—'}`,
+      style: profile?.style ?? '主观 / 规则',
+      riskProfile: profile?.riskLabel ?? (markets.join('/') || '—'),
+      baseCcy: m?.base_ccy ?? 'USD',
+      description:
+        profile?.description ?? `${m?.asset_domain ?? 'equity'} · ${markets.join('/') || '—'}`,
       pricingSummary: null,
       latestNav: Number(last?.nav ?? 100),
       dailyReturn: Number(last?.daily_return ?? 0),
@@ -182,7 +226,7 @@ export class QueryService {
           nav: Number(p.nav),
           cumulativeReturn: Number(p.cum_return ?? 0),
         })),
-      signalMix: [],
+      signalMix: profile?.signalMix ?? [],
       blueprint: {
         strategyType: m?.strategy_type ?? 'rule',
         opportunityTypeBias: {},
@@ -191,6 +235,7 @@ export class QueryService {
         cashFloor: round(Math.max(0, 1 - gross), 4),
         maxPositions: positions.length || 0,
         ctaParams: undefined,
+        playbook: profile?.playbook,
       },
       pricingPlans: [],
     };
@@ -253,17 +298,19 @@ export class QueryService {
   private mapEquityManagerDetail(m: any) {
     const summary = this.mapEquityManagerSummary(m);
     const markets = Array.isArray(m?.markets) ? m.markets : [];
+    const profile = EQUITY_STRATEGY_PROFILES[m?.slug];
     const now = new Date().toISOString();
     return {
       id: m?.slug,
       slug: m?.slug,
       name: m?.label ?? m?.slug,
       description: summary.description,
-      style: '主观 / 规则',
-      riskProfile: markets.join('/') || '—',
-      rebalanceCadence: '每日',
-      memoStyle: '规则触发',
-      universe: markets.join('/') || '—',
+      style: profile?.style ?? '主观 / 规则',
+      riskProfile: profile?.riskLabel ?? (markets.join('/') || '—'),
+      baseCcy: m?.base_ccy ?? 'USD',
+      rebalanceCadence: profile?.rebalanceCadence ?? '每日',
+      memoStyle: profile?.memoStyle ?? '规则触发',
+      universe: profile?.universe ?? (markets.join('/') || '—'),
       pricingSummary: null,
       metadata: {},
       createdAt: now,
@@ -283,7 +330,7 @@ export class QueryService {
         hitRate: summary.hitRate,
         lookbackDays: summary.performanceSeries.length,
       },
-      signalMix: [],
+      signalMix: summary.signalMix,
       blueprint: summary.blueprint,
       latestDecisions: (Array.isArray(m?.positions) ? m.positions : []).map(
         (p: any, i: number) => ({

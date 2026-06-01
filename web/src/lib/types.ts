@@ -196,13 +196,16 @@ export interface CTABlueprintParams {
 }
 
 export interface ManagerBlueprintInfo {
-  strategyType: 'linear' | 'cta';
+  strategyType: 'linear' | 'cta' | 'score' | 'rule';
   opportunityTypeBias: Partial<Record<string, number>>;
   bullishThreshold: number;
   bearishThreshold: number;
   cashFloor: number;
   maxPositions: number;
   ctaParams?: CTABlueprintParams;
+  // 量化经理:逐条策略参数(信号源/调仓/约束/成本/止损)。存在时前端直接渲染,
+  // 覆盖 cta/score 那套 crypto 口径的持仓逻辑文案。
+  playbook?: { label: string; value: string }[];
 }
 
 export interface ManagerSummary {
@@ -246,6 +249,7 @@ export interface ManagerDetail {
   description: string;
   style: string;
   riskProfile: string;
+  baseCcy?: string;
   rebalanceCadence: string;
   memoStyle: string;
   universe: string;

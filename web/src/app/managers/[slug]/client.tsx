@@ -141,7 +141,7 @@ export default function ManagerDetailClient({ slug }: Props) {
         <div className="stat-grid mt-4" style={{ maxWidth: 720 }}>
           <div className="stat-item">
             <span className="stat-label">NAV</span>
-            <span className="stat-value tabular">{formatMoney(dp.nav)}</span>
+            <span className="stat-value tabular">{formatMoney(dp.nav, manager.baseCcy)}</span>
           </div>
           <div className="stat-item">
             <span className="stat-label">累计收益</span>
@@ -211,7 +211,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                       </span>
                       {(d.opportunity.currentPrice != null || d.opportunity.priceChange24h != null) && (
                         <span className="text-xs tabular muted">
-                          {d.opportunity.currentPrice != null && formatMoney(d.opportunity.currentPrice)}
+                          {d.opportunity.currentPrice != null && formatMoney(d.opportunity.currentPrice, manager.baseCcy)}
                           {d.opportunity.priceChange24h != null && (
                             <span className={getSignedClass(d.opportunity.priceChange24h)} style={{ marginLeft: 6 }}>
                               {formatPercent(d.opportunity.priceChange24h)}
@@ -228,7 +228,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                         评分 {d.convictionScore.toFixed(3)}
                       </span>
                       {d.opportunity.currentPrice != null && (
-                        <span className="tabular">{formatMoney(d.opportunity.currentPrice)}</span>
+                        <span className="tabular">{formatMoney(d.opportunity.currentPrice, manager.baseCcy)}</span>
                       )}
                     </div>
                   </div>
@@ -390,7 +390,16 @@ export default function ManagerDetailClient({ slug }: Props) {
               <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--surface)', borderRadius: 6, fontSize: '0.78rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
                 <strong style={{ color: 'var(--text)' }}>持仓逻辑</strong>
                 <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {manager.blueprint.strategyType === 'cta' ? (
+                  {manager.blueprint.playbook?.length ? (
+                    <>
+                      {manager.blueprint.playbook.map((row, i) => (
+                        <div key={i}>
+                          <span style={{ color: 'var(--text)' }}>{row.label}：</span>
+                          {row.value}
+                        </div>
+                      ))}
+                    </>
+                  ) : manager.blueprint.strategyType === 'cta' ? (
                     <>
                       <div>
                         <span style={{ color: 'var(--text)' }}>趋势过滤：</span>

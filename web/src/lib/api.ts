@@ -59,14 +59,17 @@ export function formatPercent(value: number | null | undefined, digits = 2) {
   return `${value >= 0 ? '+' : ''}${value.toFixed(digits)}%`;
 }
 
-export function formatMoney(value: number | null | undefined) {
+export function formatMoney(
+  value: number | null | undefined,
+  currency = 'USD',
+) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '--';
   }
 
   return new Intl.NumberFormat('zh-CN', {
     style: 'currency',
-    currency: 'USD',
+    currency: currency || 'USD',
     maximumFractionDigits: value >= 100 ? 0 : 2,
   }).format(value);
 }
