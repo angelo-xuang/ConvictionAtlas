@@ -109,6 +109,52 @@ const EQUITY_STRATEGY_PROFILES: Record<
       { label: '本金', value: '100 万 USD(净值看百分比)' },
     ],
   },
+  'wood-us': {
+    style: '成长 · 木头姐人格',
+    riskLabel: '满仓 · 高波动',
+    rebalanceCadence: '周频 · 每周一',
+    universe: '美股跨板块大盘(40只共享池)',
+    memoStyle: 'LLM 人格驱动 · Cathie Wood 口吻',
+    description:
+      '蒸馏 Cathie Wood (ARK) 的颠覆性创新框架: 只投站在五大创新平台(AI / 机器人 / 储能 / 公链 / 多组学测序)浪潮上、未来 5 年能翻倍的公司。以 Wright’s Law 看成本崩塌 → 采用率爆发 → TAM 指数级扩张, 不锚定当前 PE / 盈利 / 负债, 拥抱波动。与巴菲特人格在同一池子里形成镜像对立——她重仓 AI 算力链等高成长标的。',
+    signalMix: [
+      { name: '成长 checklist(营收增速 / 毛利 / 弹性)', weight: 0.5 },
+      { name: 'LLM Cathie Wood 人格判断', weight: 0.5 },
+    ],
+    playbook: [
+      { label: '信号源', value: '成长 checklist 预筛(5 道闸门)+ DeepSeek 木头姐人格定夺' },
+      { label: '主题', value: '五大创新平台: AI / 机器人 / 储能 / 公链 / 多组学测序' },
+      { label: '选股', value: '高营收增速 + 可规模化毛利 + 颠覆性赛道, 过闸门且 LLM 看多者' },
+      { label: '估值观', value: '不用当前 PE / 盈利 / 负债否决——看 5 年 TAM 与成本曲线轨迹' },
+      { label: '加权', value: '按 LLM 信心归一, 单票 ≤40%' },
+      { label: '调仓频率', value: '周频(每周一); 日内仅做 −25% 灾难止损' },
+      { label: '风险', value: '主动承担高波动, 愿穿越回撤换长期超指数级增长' },
+      { label: '本金', value: '100 万 USD(净值看百分比)' },
+    ],
+  },
+  'burry-us': {
+    style: '深度价值 · Burry 人格',
+    riskLabel: '逆向 · 防御(可大量持现金)',
+    rebalanceCadence: '周频 · 每周一',
+    universe: '美股跨板块大盘(40只共享池)',
+    memoStyle: 'LLM 人格驱动 · Michael Burry 口吻',
+    description:
+      '蒸馏 Michael Burry (Scion) 的深度价值逆向框架: 师承格雷厄姆, 法证式抠资产负债表, 只在价格显著低于保守内在价值(30-40% 安全边际)时买入。逆向——买被市场厌恶的、回避被叙事吹起的泡沫。对当前 AI / 大型科技股狂热深度怀疑。现金是一种头寸: 找不到够便宜够安全的标的时宁可大量持现金。执行层当前长仓-only, 看空观点写进备忘录(做空能力为后续扩展)。',
+    signalMix: [
+      { name: '深度价值 checklist(PE / PB / FCF / 安全边际)', weight: 0.5 },
+      { name: 'LLM Michael Burry 人格判断', weight: 0.5 },
+    ],
+    playbook: [
+      { label: '信号源', value: '深度价值 checklist 预筛(5 道闸门)+ DeepSeek Burry 人格定夺' },
+      { label: '安全边际', value: '价格需显著低于保守内在价值(30-40%)才考虑' },
+      { label: '选股', value: '低 PE + 低 PB + 高 FCF 收益率 + 资产负债表稳健, 且 LLM 看多' },
+      { label: '逆向', value: '买被厌恶的便宜货, 回避被叙事吹起的泡沫(对 AI 狂热看空)' },
+      { label: '现金观', value: '现金是头寸——无足够安全标的时宁可大量持现金, 空仓不是失败是纪律' },
+      { label: '调仓频率', value: '周频(每周一); 日内仅做 −25% 灾难止损' },
+      { label: '执行边界', value: '当前长仓-only; 看空观点写进备忘录, 做空能力待扩展' },
+      { label: '本金', value: '100 万 USD(净值看百分比)' },
+    ],
+  },
 };
 
 type HistoryPointLike = {
@@ -565,12 +611,10 @@ export class QueryService {
           managerId: slug,
           opportunityId: p?.symbol,
           title: `${p?.name ?? p?.symbol} · 持仓逻辑`,
-          summary: p.note,
-          content: `**${p?.name ?? p?.symbol}**(权重 ${(
-            (Number(p?.weight) || 0) * 100
-          ).toFixed(1)}%,浮动 ${((Number(p?.pnl_pct) || 0) * 100).toFixed(
-            2,
-          )}%)\n\n${p.note}`,
+          summary: `权重 ${((Number(p?.weight) || 0) * 100).toFixed(1)}% · 浮动 ${(
+            (Number(p?.pnl_pct) || 0) * 100
+          ).toFixed(2)}%`,
+          content: p.note,
           isPremium: false,
           accessTier: 'public',
           generatedBy: 'rule',

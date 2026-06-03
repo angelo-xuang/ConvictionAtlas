@@ -265,7 +265,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                         <span>无关联标的</span>
                       )}
                     </div>
-                    {memo.content && (
+                    {memo.content && memo.content.trim() !== (memo.summary || '').trim() && (
                       <div
                         className="memo-content"
                         dangerouslySetInnerHTML={{ __html: renderMarkdown(memo.content) }}
