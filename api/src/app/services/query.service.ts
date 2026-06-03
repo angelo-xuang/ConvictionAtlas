@@ -134,12 +134,12 @@ const EQUITY_STRATEGY_PROFILES: Record<
   },
   'burry-us': {
     style: '深度价值 · Burry 人格',
-    riskLabel: '逆向 · 防御(可大量持现金)',
+    riskLabel: '逆向 · 多空(做空泡沫)',
     rebalanceCadence: '周频 · 每周一',
     universe: '美股跨板块大盘(40只共享池)',
     memoStyle: 'LLM 人格驱动 · Michael Burry 口吻',
     description:
-      '蒸馏 Michael Burry (Scion) 的深度价值逆向框架: 师承格雷厄姆, 法证式抠资产负债表, 只在价格显著低于保守内在价值(30-40% 安全边际)时买入。逆向——买被市场厌恶的、回避被叙事吹起的泡沫。对当前 AI / 大型科技股狂热深度怀疑。现金是一种头寸: 找不到够便宜够安全的标的时宁可大量持现金。执行层当前长仓-only, 看空观点写进备忘录(做空能力为后续扩展)。',
+      '蒸馏 Michael Burry (Scion) 的深度价值逆向框架: 师承格雷厄姆, 法证式抠资产负债表, 只在价格显著低于保守内在价值(30-40% 安全边际)时买入。逆向——买被市场厌恶的便宜货(做多), 做空被叙事吹起的泡沫。对当前 AI / 大型科技股狂热深度怀疑, 现实中正重仓做空 NVDA / PLTR——本经理同样可真实建立空头仓位。现金亦是头寸: 既无够便宜的多头、也无高信心做空标的时宁可持现金。',
     signalMix: [
       { name: '深度价值 checklist(PE / PB / FCF / 安全边际)', weight: 0.5 },
       { name: 'LLM Michael Burry 人格判断', weight: 0.5 },
@@ -147,11 +147,11 @@ const EQUITY_STRATEGY_PROFILES: Record<
     playbook: [
       { label: '信号源', value: '深度价值 checklist 预筛(5 道闸门)+ DeepSeek Burry 人格定夺' },
       { label: '安全边际', value: '价格需显著低于保守内在价值(30-40%)才考虑' },
-      { label: '选股', value: '低 PE + 低 PB + 高 FCF 收益率 + 资产负债表稳健, 且 LLM 看多' },
-      { label: '逆向', value: '买被厌恶的便宜货, 回避被叙事吹起的泡沫(对 AI 狂热看空)' },
-      { label: '现金观', value: '现金是头寸——无足够安全标的时宁可大量持现金, 空仓不是失败是纪律' },
-      { label: '调仓频率', value: '周频(每周一); 日内仅做 −25% 灾难止损' },
-      { label: '执行边界', value: '当前长仓-only; 看空观点写进备忘录, 做空能力待扩展' },
+      { label: '做多', value: '低 PE + 低 PB + 高 FCF 收益率 + 资产负债表稳健 + 30%+ 安全边际, 且 LLM 看多' },
+      { label: '做空', value: '泡沫筛(高 PE / 高 P/B / 低 FCF 收益率 / 无安全边际 / 叙事驱动)+ LLM 看空 → 真实建空头' },
+      { label: '空头风控', value: '单只 ≤20% aum, 总做空 ≤50% aum, +25% 涨穿即回补止损' },
+      { label: '现金观', value: '无够便宜多头、也无高信心做空时宁可持现金, 空仓不是失败是纪律' },
+      { label: '调仓频率', value: '周频(每周一); 日内做 −25%(多)/+25%(空) 灾难止损' },
       { label: '本金', value: '100 万 USD(净值看百分比)' },
     ],
   },
