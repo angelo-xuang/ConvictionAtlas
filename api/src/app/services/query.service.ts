@@ -424,8 +424,9 @@ export class QueryService {
       latestDecisions: (Array.isArray(m?.positions) ? m.positions : []).map(
         (p: any, i: number) => ({
           id: `${m?.slug}-dec-${i}`,
-          direction: 'BULLISH' as const,
-          convictionScore: Number(p?.weight) || 0,
+          // 空头(qty<0)方向为看空; 多头看多
+          direction: ((Number(p?.qty) || 0) < 0 ? 'BEARISH' : 'BULLISH') as const,
+          convictionScore: Math.abs(Number(p?.weight) || 0),
           targetWeight: Number(p?.weight) || 0,
           rationale: p?.note || '规则触发持仓',
           opportunity: {
