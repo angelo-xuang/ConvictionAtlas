@@ -86,6 +86,29 @@ const EQUITY_STRATEGY_PROFILES: Record<
       { label: '本金', value: '500 万 CNY(净值看百分比)' },
     ],
   },
+  'buffett-us': {
+    style: '价值 · 巴菲特人格',
+    riskLabel: '集中持有 · 低换手',
+    rebalanceCadence: '周频 · 每周一',
+    universe: '美股跨板块大盘(40只共享池)',
+    memoStyle: 'LLM 人格驱动 · 巴菲特口吻',
+    description:
+      '蒸馏沃伦·巴菲特的投资框架(护城河 / 能力圈 / owner earnings / 安全边际),对共享美股池逐只跑客观财务 checklist 预筛,过闸门的标的再由 LLM 以巴菲特视角判断买入 / 卖出 / 观望并产出投研备忘录。坚守"以合理价格买入伟大生意",回避看不懂的 AI 算力链与高杠杆标的,集中持有少数优质特许经营权。',
+    signalMix: [
+      { name: '客观财务 checklist(ROE / 毛利 / 杠杆 / FCF)', weight: 0.5 },
+      { name: 'LLM 巴菲特人格判断', weight: 0.5 },
+    ],
+    playbook: [
+      { label: '信号源', value: '量化 checklist 预筛(7 道闸门)+ DeepSeek 巴菲特人格定夺' },
+      { label: '能力圈', value: '只买看得懂的生意;AI 半导体等高速变化标的归入"太难"篮子' },
+      { label: '选股', value: '护城河 + 高 ROE + owner earnings + 合理估值,过闸门且 LLM 看多者' },
+      { label: '加权', value: '按 LLM 信心归一,单票 ≤40%(打孔卡集中)' },
+      { label: '调仓频率', value: '周频(每周一);日内仅做 −25% 灾难止损' },
+      { label: '估值纪律', value: '以合理价格买伟大生意,不为便宜买平庸,不为贵错过伟大' },
+      { label: '止损', value: '−25% 灾难线(巴菲特式宽止损,仅作生存底线)' },
+      { label: '本金', value: '100 万 USD(净值看百分比)' },
+    ],
+  },
 };
 
 type HistoryPointLike = {
