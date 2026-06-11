@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { PerfLine, MiniLine, BarChart } from '../../../components/Chart';
+import { PerfLine } from '../../../components/Chart';
 import {
   fetchPageData,
   formatMoney,
@@ -20,13 +20,6 @@ import type {
   Memo,
   PortfolioSnapshot,
 } from '../../../lib/types';
-
-function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(value));
-}
 
 function renderMarkdown(md: string): string {
   if (!md) return '';
@@ -147,12 +140,22 @@ export default function ManagerDetailClient({ slug }: Props) {
     dp.cumulativeReturn > 0 ? 'positive'
       : dp.cumulativeReturn < 0 ? 'negative'
         : 'neutral';
+  const sharpeValue =
+    annReturn != null && annVol != null && annVol > 0
+      ? annReturn / annVol
+      : dp.sharpe;
+  const positions = livePortfolio?.positions ?? [];
+  const maxAbsPositionWeight = Math.max(
+    ...positions.map((pos) => Math.abs(pos.weight)),
+    1e-4,
+  );
+  const lastUpdated =
+    livePortfolio?.computedAt ?? manager.latestPerformance?.computedAt ?? manager.updatedAt;
 
   return (
     <div className="shell">
-      {/* ── Header ── */}
-      <div className="page-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-        <div className="breadcrumb">
+      <section className="manager-hero">
+        <div className="breadcrumb manager-hero-breadcrumb">
           <Link href="/">首页</Link>
           <span>/</span>
           <Link href="/managers">基金经理</Link>
@@ -160,85 +163,99 @@ export default function ManagerDetailClient({ slug }: Props) {
           <span style={{ color: 'var(--text)' }}>{manager.name}</span>
         </div>
 
-        <div className="flex items-center gap-4 mb-2">
-          <div className="avatar avatar-lg">{manager.name.charAt(0)}</div>
-          <div>
-            <h1 style={{ marginBottom: 4 }}>{manager.name}</h1>
-            <div className="detail-tags">
-              <span className="badge badge-accent">{manager.style}</span>
-              <span className="badge badge-warning">{manager.riskProfile}</span>
-              <span className="badge badge-neutral">{manager.rebalanceCadence}</span>
-              {manager.universe && <span className="badge badge-neutral">{manager.universe}</span>}
+        <div className="manager-hero-grid">
+          <div className="manager-identity">
+            <div className="manager-initial">{manager.name.charAt(0)}</div>
+            <div className="manager-copy">
+              <div className="manager-kicker">经理档案</div>
+              <h1>{manager.name}</h1>
+              <div className="detail-tags">
+                <span className="badge badge-accent">{manager.style}</span>
+                <span className="badge badge-warning">{manager.riskProfile}</span>
+                <span className="badge badge-neutral">{manager.rebalanceCadence}</span>
+                {manager.universe && <span className="badge badge-neutral">{manager.universe}</span>}
+              </div>
+              <p className="manager-lede">{manager.description}</p>
+            </div>
+          </div>
+
+          <div className="manager-scoreboard">
+            <div className="scoreboard-primary">
+              <span className="stat-label">NAV</span>
+              <span className="scoreboard-nav tabular">{formatMoney(dp.nav, manager.baseCcy)}</span>
+              <span className={`scoreboard-return tabular ${getSignedClass(dp.cumulativeReturn)}`}>
+                {formatReturn(dp.cumulativeReturn)} 累计收益
+              </span>
+            </div>
+            <div className="scoreboard-grid">
+              <div className="scoreboard-cell">
+                <span className="stat-label">年化收益</span>
+                <span className={`scoreboard-value tabular ${annReturn != null ? getSignedClass(annReturn) : ''}`}>
+                  {annReturn != null ? formatReturn(annReturn) : '—'}
+                </span>
+              </div>
+              <div className="scoreboard-cell">
+                <span className="stat-label">年化波动</span>
+                <span className="scoreboard-value tabular">
+                  {annVol != null ? formatPercent(annVol * 100) : '—'}
+                </span>
+              </div>
+              <div className="scoreboard-cell">
+                <span className="stat-label">回撤</span>
+                <span className="scoreboard-value tabular">{formatReturn(dp.drawdown)}</span>
+              </div>
+              <div className="scoreboard-cell">
+                <span className="stat-label">Sharpe</span>
+                <span className="scoreboard-value tabular">{sharpeValue.toFixed(2)}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <p className="muted" style={{ marginTop: 8, maxWidth: 640 }}>
-          {manager.description}
-        </p>
-
-        {/* Quick stats row */}
-        <div className="stat-grid mt-4" style={{ maxWidth: 720 }}>
-          <div className="stat-item">
-            <span className="stat-label">NAV</span>
-            <span className="stat-value tabular">{formatMoney(dp.nav, manager.baseCcy)}</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">累计收益</span>
-            <span className={`stat-value tabular ${getSignedClass(dp.cumulativeReturn)}`}>
-              {formatReturn(dp.cumulativeReturn)}
-            </span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">年化收益</span>
-            <span className={`stat-value tabular ${annReturn != null ? getSignedClass(annReturn) : ''}`}>
-              {annReturn != null ? formatReturn(annReturn) : '—'}
-            </span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">年化波动</span>
-            <span className="stat-value tabular">
-              {annVol != null ? formatPercent(annVol * 100) : '—'}
-            </span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">回撤</span>
-            <span className="stat-value tabular">{formatReturn(dp.drawdown)}</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Sharpe</span>
-            <span className="stat-value tabular">
-              {annReturn != null && annVol != null && annVol > 0
-                ? (annReturn / annVol).toFixed(2)
-                : dp.sharpe.toFixed(2)}
-            </span>
-          </div>
-          <div className="stat-item">
+        <div className="manager-meta-strip">
+          <div>
             <span className="stat-label">命中率</span>
-            <span className="stat-value tabular">{formatPercent(dp.hitRate * 100)}</span>
+            <strong className="tabular">{formatPercent(dp.hitRate * 100)}</strong>
+          </div>
+          <div>
+            <span className="stat-label">持仓数</span>
+            <strong className="tabular">{positions.length}</strong>
+          </div>
+          <div>
+            <span className="stat-label">总敞口</span>
+            <strong className="tabular">
+              {formatPercent((livePortfolio?.grossExposure ?? 0) * 100)}
+            </strong>
+          </div>
+          <div>
+            <span className="stat-label">更新时间</span>
+            <strong className="tabular">{formatDateTime(lastUpdated)}</strong>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* ── Two-column layout ── */}
       <div className="detail-layout">
         {/* ── Main column ── */}
         <div className="detail-main">
           {/* Performance chart */}
-          <div className="perf-card">
+          <div className="perf-card performance-card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>业绩曲线</h2>
+              <div>
+                <h2>业绩曲线</h2>
+                <span className="muted text-xs">净值曲线与年度拆分</span>
+              </div>
               <span className="muted text-xs">
                 {dp.lookbackDays ? `${dp.lookbackDays.toFixed(0)}天回溯` : '回测'}
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'stretch' }}>
-              <div style={{ flex: '1 1 340px', minWidth: 0 }}>
+            <div className="performance-grid">
+              <div className="performance-chart-panel">
                 <div className="chart-area">
                   <PerfLine
                     points={navPoints}
                     dateLabels={dateLabels}
-                    height={240}
+                    height={300}
                     tone={perfTone}
                     showArea
                   />
@@ -255,15 +272,14 @@ export default function ManagerDetailClient({ slug }: Props) {
 
               {/* 逐年收益 */}
               {recentYears.length > 0 && (
-                <div style={{ width: 180, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <span className="text-xs muted" style={{ fontWeight: 600 }}>逐年收益</span>
+                <div className="year-return-panel">
+                  <div className="year-return-title">逐年收益</div>
                   {recentYears.map(({ year, ret }) => {
                     const pos = ret >= 0;
-                    const barColor = pos ? '#059669' : '#dc2626';
                     const widthPct = Math.max((Math.abs(ret) / yearBarMax) * 100, 2);
                     return (
-                      <div key={year}>
-                        <div className="flex justify-between text-xs" style={{ marginBottom: 3 }}>
+                      <div key={year} className="year-return-row">
+                        <div className="flex justify-between text-xs">
                           <span className="muted tabular">
                             {year}
                             {year === lastSeriesYear ? ' YTD' : ''}
@@ -272,8 +288,11 @@ export default function ManagerDetailClient({ slug }: Props) {
                             {formatReturn(ret)}
                           </span>
                         </div>
-                        <div style={{ height: 6, borderRadius: 3, background: '#f0f1f5', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${widthPct}%`, borderRadius: 3, background: barColor, opacity: 0.85 }} />
+                        <div className="year-return-track">
+                          <div
+                            className={`year-return-fill ${pos ? 'is-positive' : 'is-negative'}`}
+                            style={{ width: `${widthPct}%` }}
+                          />
                         </div>
                       </div>
                     );
@@ -286,12 +305,12 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Current decisions */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>当前决策</h2>
+              <h2>当前决策</h2>
               <span className="muted text-xs">按评分排序的模型输出</span>
             </div>
             {manager.latestDecisions.length > 0 ? (
-              <div className="table-wrap">
-                <table>
+              <div className="table-wrap decision-table-wrap">
+                <table className="compact-table">
                   <thead>
                     <tr>
                       <th>标的</th>
@@ -305,7 +324,10 @@ export default function ManagerDetailClient({ slug }: Props) {
                     {manager.latestDecisions.map((d) => (
                       <tr key={d.id}>
                         <td>
-                          <Link href={`/opportunities/detail?slug=${d.opportunity.slug}`} style={{ fontWeight: 600 }}>
+                          <Link
+                            href={`/opportunities/detail?slug=${d.opportunity.slug}`}
+                            className="table-link"
+                          >
                             {d.opportunity.title}
                           </Link>
                         </td>
@@ -329,7 +351,7 @@ export default function ManagerDetailClient({ slug }: Props) {
                           )}
                         </td>
                         <td className="tabular muted" style={{ textAlign: 'right' }}>
-                          {d.convictionScore ? d.convictionScore.toFixed(3) : '—'}
+                          {Number.isFinite(d.convictionScore) ? d.convictionScore.toFixed(3) : '—'}
                         </td>
                       </tr>
                     ))}
@@ -344,7 +366,7 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Memos */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>研究备忘录</h2>
+              <h2>研究备忘录</h2>
               <span className="muted text-xs">基于当前实时组合生成</span>
             </div>
             {memos.length > 0 ? (
@@ -384,80 +406,73 @@ export default function ManagerDetailClient({ slug }: Props) {
 
         {/* ── Sidebar ── */}
         <div className="detail-sidebar">
-          {/* Portfolio stats */}
-          <div className="card">
+          <div className="card portfolio-card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>投资组合统计</h2>
-              <span className="muted text-xs">{livePortfolio?.positions?.length ?? 0} 持仓</span>
+              <div>
+                <h2>投资组合</h2>
+                <span className="muted text-xs">{positions.length} 个持仓</span>
+              </div>
+              <span className="badge badge-neutral">实时</span>
             </div>
-            <div className="stat-grid">
-              <div className="stat-item">
+            <div className="portfolio-summary-grid">
+              <div>
                 <span className="stat-label">总敞口</span>
-                <span className="stat-value" style={{ fontSize: '1.1rem' }}>
+                <strong className="tabular">
                   {formatPercent((livePortfolio?.grossExposure ?? 0) * 100)}
-                </span>
+                </strong>
               </div>
-              <div className="stat-item">
+              <div>
                 <span className="stat-label">现金</span>
-                <span className="stat-value" style={{ fontSize: '1.1rem' }}>
+                <strong className="tabular">
                   {formatPercent((livePortfolio?.cashWeight ?? 0) * 100)}
-                </span>
+                </strong>
               </div>
-              <div className="stat-item">
+              <div>
                 <span className="stat-label">风险</span>
-                <span className="stat-value" style={{ fontSize: '1.1rem' }}>
-                  {(livePortfolio?.riskScore ?? 0).toFixed(2)}
-                </span>
+                <strong className="tabular">{(livePortfolio?.riskScore ?? 0).toFixed(2)}</strong>
               </div>
-              <div className="stat-item">
+              <div>
                 <span className="stat-label">评分</span>
-                <span className="stat-value" style={{ fontSize: '1.1rem' }}>
-                  {reviewState.averageRating?.toFixed(2) ?? '--'}
-                </span>
+                <strong className="tabular">{reviewState.averageRating?.toFixed(2) ?? '--'}</strong>
               </div>
             </div>
-          </div>
 
-          {/* Positions list */}
-          <div className="card">
-            <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>持仓</h2>
-            </div>
-            {livePortfolio?.positions?.length ? (
-              <div className="positions-list">
-                {livePortfolio.positions.map((pos) => (
-                  <div key={pos.id} className="position-row">
-                    <div className="avatar avatar-sm">{pos.opportunity.title.charAt(0)}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <Link
-                        href={`/opportunities/detail?slug=${pos.opportunity.slug}`}
-                        className="truncate"
-                        style={{ fontWeight: 600, fontSize: '0.82rem', display: 'block' }}
-                      >
-                        {pos.opportunity.title}
-                      </Link>
-                      <span className="muted text-xs">
-                        评分 {pos.convictionScore.toFixed(3)}
-                      </span>
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div className="tabular" style={{ fontWeight: 600, fontSize: '0.82rem' }}>
-                        {formatPercent(pos.weight * 100)}
+            {positions.length ? (
+              <div className="positions-list portfolio-list">
+                {positions.map((pos) => {
+                  const isShort = pos.weight < 0;
+                  const barWidth = Math.max((Math.abs(pos.weight) / maxAbsPositionWeight) * 100, 3);
+                  return (
+                    <div key={pos.id} className="position-row portfolio-row">
+                      <div className={`position-side ${isShort ? 'is-short' : 'is-long'}`} />
+                      <div className="position-main">
+                        <Link
+                          href={`/opportunities/detail?slug=${pos.opportunity.slug}`}
+                          className="position-symbol"
+                        >
+                          {pos.opportunity.title}
+                        </Link>
+                        <span className="muted text-xs tabular">
+                          评分 {Number.isFinite(pos.convictionScore) ? pos.convictionScore.toFixed(3) : '--'}
+                        </span>
                       </div>
-                      {pos.opportunity.priceChange24h != null && (
-                        <div className={`text-xs tabular ${getSignedClass(pos.opportunity.priceChange24h)}`}>
-                          {formatPercent(pos.opportunity.priceChange24h)}
-                        </div>
-                      )}
+                      <div className="position-numbers">
+                        <strong className="tabular">{formatPercent(pos.weight * 100)}</strong>
+                        {pos.opportunity.priceChange24h != null && (
+                          <span className={`text-xs tabular ${getSignedClass(pos.opportunity.priceChange24h)}`}>
+                            {formatPercent(pos.opportunity.priceChange24h)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="weight-bar">
+                        <div
+                          className={`weight-bar-fill ${isShort ? 'is-short' : 'is-long'}`}
+                          style={{ width: `${barWidth}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="weight-bar" style={{ width: 48 }}>
-                      <div
-                        className="weight-bar-fill"
-                        style={{ width: `${Math.min(pos.weight * 100, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="muted text-sm">暂无持仓。</div>
@@ -467,7 +482,7 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Signal architecture */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>信号架构与评分逻辑</h2>
+              <h2>信号架构与评分逻辑</h2>
             </div>
             <div className="signal-list">
               {manager.signalMix.map((sig, i) => (
@@ -560,7 +575,7 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Rebalance history */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>再平衡历史</h2>
+              <h2>再平衡历史</h2>
               <span className="muted text-xs">近期变动</span>
             </div>
             {rebalances.length > 0 ? (
@@ -593,7 +608,7 @@ export default function ManagerDetailClient({ slug }: Props) {
           {/* Reviews */}
           <div className="card">
             <div className="card-header">
-              <h2 style={{ fontSize: '0.95rem' }}>评价</h2>
+              <h2>评价</h2>
               <span className="muted text-xs">{reviewState.total} 条</span>
             </div>
             {reviewState.reviews.length > 0 ? (
