@@ -122,6 +122,27 @@ export default function ManagerDetailClient({ slug }: Props) {
       rets.reduce((s, r) => s + (r - mean) ** 2, 0) / Math.max(rets.length - 1, 1);
     annVol = Math.sqrt(variance) * Math.sqrt(252);
   }
+
+  // 逐年收益:每年末净值 / 上年末净值 - 1(首年以序列首点为基,末年为 YTD)
+  const yearlyReturns: { year: string; ret: number }[] = [];
+  {
+    const series = manager.performanceSeries
+      .map((p) => ({ d: String(p.pointAt).slice(0, 10), nav: p.nav }))
+      .filter((p) => Number.isFinite(p.nav) && p.nav > 0);
+    const lastNavByYear = new Map<string, number>();
+    for (const p of series) lastNavByYear.set(p.d.slice(0, 4), p.nav);
+    let prev = series.length ? series[0].nav : null;
+    for (const y of [...lastNavByYear.keys()].sort()) {
+      const end = lastNavByYear.get(y)!;
+      if (prev != null && prev > 0) yearlyReturns.push({ year: y, ret: end / prev - 1 });
+      prev = end;
+    }
+  }
+  const recentYears = yearlyReturns.slice(-6).reverse();
+  const yearBarMax = Math.max(...recentYears.map((r) => Math.abs(r.ret)), 1e-4);
+  const lastSeriesYear = dateLabels.length
+    ? dateLabels[dateLabels.length - 1].slice(0, 4)
+    : null;
   const perfTone: 'positive' | 'negative' | 'neutral' =
     dp.cumulativeReturn > 0 ? 'positive'
       : dp.cumulativeReturn < 0 ? 'negative'
@@ -211,21 +232,53 @@ export default function ManagerDetailClient({ slug }: Props) {
                 {dp.lookbackDays ? `${dp.lookbackDays.toFixed(0)}天回溯` : '回测'}
               </span>
             </div>
-            <div className="chart-area">
-              <PerfLine
-                points={navPoints}
-                dateLabels={dateLabels}
-                height={220}
-                tone={perfTone}
-                showArea
-              />
-            </div>
-            <div className="flex justify-between mt-2 text-xs muted">
-              {manager.performanceSeries[0] && (
-                <span>{formatDateTime(manager.performanceSeries[0].pointAt)}</span>
-              )}
-              {manager.performanceSeries[manager.performanceSeries.length - 1] && (
-                <span>{formatDateTime(manager.performanceSeries[manager.performanceSeries.length - 1].pointAt)}</span>
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'stretch' }}>
+              <div style={{ flex: '1 1 340px', minWidth: 0 }}>
+                <div className="chart-area">
+                  <PerfLine
+                    points={navPoints}
+                    dateLabels={dateLabels}
+                    height={240}
+                    tone={perfTone}
+                    showArea
+                  />
+                </div>
+                <div className="flex justify-between mt-2 text-xs muted">
+                  {manager.performanceSeries[0] && (
+                    <span>{formatDateTime(manager.performanceSeries[0].pointAt)}</span>
+                  )}
+                  {manager.performanceSeries[manager.performanceSeries.length - 1] && (
+                    <span>{formatDateTime(manager.performanceSeries[manager.performanceSeries.length - 1].pointAt)}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* 逐年收益 */}
+              {recentYears.length > 0 && (
+                <div style={{ width: 180, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <span className="text-xs muted" style={{ fontWeight: 600 }}>逐年收益</span>
+                  {recentYears.map(({ year, ret }) => {
+                    const pos = ret >= 0;
+                    const barColor = pos ? '#059669' : '#dc2626';
+                    const widthPct = Math.max((Math.abs(ret) / yearBarMax) * 100, 2);
+                    return (
+                      <div key={year}>
+                        <div className="flex justify-between text-xs" style={{ marginBottom: 3 }}>
+                          <span className="muted tabular">
+                            {year}
+                            {year === lastSeriesYear ? ' YTD' : ''}
+                          </span>
+                          <span className={`tabular ${getSignedClass(ret)}`} style={{ fontWeight: 600 }}>
+                            {formatReturn(ret)}
+                          </span>
+                        </div>
+                        <div style={{ height: 6, borderRadius: 3, background: '#f0f1f5', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${widthPct}%`, borderRadius: 3, background: barColor, opacity: 0.85 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
@@ -237,37 +290,51 @@ export default function ManagerDetailClient({ slug }: Props) {
               <span className="muted text-xs">按评分排序的模型输出</span>
             </div>
             {manager.latestDecisions.length > 0 ? (
-              <div className="decision-grid">
-                {manager.latestDecisions.map((d) => (
-                  <div key={d.id} className="decision-card">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`badge ${getDirectionClass(d.direction)}`}>
-                        {formatDirection(d.direction)}
-                      </span>
-                      {(d.opportunity.currentPrice != null || d.opportunity.priceChange24h != null) && (
-                        <span className="text-xs tabular muted">
-                          {d.opportunity.currentPrice != null && formatMoney(d.opportunity.currentPrice, manager.baseCcy)}
-                          {d.opportunity.priceChange24h != null && (
-                            <span className={getSignedClass(d.opportunity.priceChange24h)} style={{ marginLeft: 6 }}>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>标的</th>
+                      <th>方向</th>
+                      <th style={{ textAlign: 'right' }}>现价</th>
+                      <th style={{ textAlign: 'right' }}>24h</th>
+                      <th style={{ textAlign: 'right' }}>评分</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {manager.latestDecisions.map((d) => (
+                      <tr key={d.id}>
+                        <td>
+                          <Link href={`/opportunities/detail?slug=${d.opportunity.slug}`} style={{ fontWeight: 600 }}>
+                            {d.opportunity.title}
+                          </Link>
+                        </td>
+                        <td>
+                          <span className={`badge ${getDirectionClass(d.direction)}`}>
+                            {formatDirection(d.direction)}
+                          </span>
+                        </td>
+                        <td className="tabular" style={{ textAlign: 'right' }}>
+                          {d.opportunity.currentPrice != null
+                            ? formatMoney(d.opportunity.currentPrice, manager.baseCcy)
+                            : '—'}
+                        </td>
+                        <td className="tabular" style={{ textAlign: 'right' }}>
+                          {d.opportunity.priceChange24h != null ? (
+                            <span className={getSignedClass(d.opportunity.priceChange24h)}>
                               {formatPercent(d.opportunity.priceChange24h)}
                             </span>
+                          ) : (
+                            '—'
                           )}
-                        </span>
-                      )}
-                    </div>
-                    <Link href={`/opportunities/detail?slug=${d.opportunity.slug}`} style={{ fontWeight: 600, fontSize: '0.88rem' }}>
-                      {d.opportunity.title}
-                    </Link>
-                    <div className="flex items-center justify-between mt-2 text-xs">
-                      <span className="muted">
-                        评分 {d.convictionScore.toFixed(3)}
-                      </span>
-                      {d.opportunity.currentPrice != null && (
-                        <span className="tabular">{formatMoney(d.opportunity.currentPrice, manager.baseCcy)}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                        <td className="tabular muted" style={{ textAlign: 'right' }}>
+                          {d.convictionScore ? d.convictionScore.toFixed(3) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
               <div className="muted text-sm">暂无活跃决策。</div>

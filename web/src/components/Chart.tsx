@@ -101,7 +101,8 @@ export function PerfLine({
         color: '#9ca3af',
         fontSize: 10,
         hideOverlap: true,
-        formatter: (v: string) => v.slice(5),
+        // 'yyyy-mm-dd' → 'yyyy-mm',保留年份;非日期标签原样显示
+        formatter: (v: string) => (/^\d{4}-\d{2}/.test(v) ? v.slice(0, 7) : v),
       },
     },
     yAxis: {
