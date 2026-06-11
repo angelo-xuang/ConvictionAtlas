@@ -27,6 +27,15 @@ const EQUITY_AGENT_STATE_URL =
 let EQUITY_CACHE: { at: number; data: any[] } | null = null;
 const EQUITY_CACHE_TTL_MS = 15000;
 
+// 展示层隐藏的经理(数据/cron 照常,仅不在前端列表与排行出现,可逆)。
+const HIDDEN_MANAGER_SLUGS = new Set([
+  'narrative-manager',
+  'event-driven-manager',
+  'onchain-fundamentals-manager',
+  'prediction-market-manager',
+  'us-ai-conviction', // 示例主观经理,已停更
+]);
+
 // equity 经理策略档案:覆盖默认"主观/规则/每日"。用于前端把调仓周期、信号构成、
 // 持仓规则等参数写清楚(确定性量化经理)。未列出的 equity 经理沿用默认值。
 const EQUITY_STRATEGY_PROFILES: Record<
@@ -208,12 +217,14 @@ export class QueryService {
   ) {}
 
   async getManagers() {
-    const managers = await this.prisma.manager.findMany({
-      include: {
-        pricingPlans: true,
-        reviews: true,
-      },
-    });
+    const managers = (
+      await this.prisma.manager.findMany({
+        include: {
+          pricingPlans: true,
+          reviews: true,
+        },
+      })
+    ).filter((m) => !HIDDEN_MANAGER_SLUGS.has(m.slug));
 
     const cryptoSummaries = await Promise.all(
       managers.map(async (manager) => {
@@ -877,11 +888,13 @@ export class QueryService {
   }
 
   async getManagerLeaderboard() {
-    const managers = await this.prisma.manager.findMany({
-      include: {
-        reviews: true,
-      },
-    });
+    const managers = (
+      await this.prisma.manager.findMany({
+        include: {
+          reviews: true,
+        },
+      })
+    ).filter((m) => !HIDDEN_MANAGER_SLUGS.has(m.slug));
 
     const rows = await Promise.all(
       managers.map(async (manager) => {
@@ -921,7 +934,9 @@ export class QueryService {
     }
     try {
       const res = await axios.get(EQUITY_AGENT_STATE_URL, { timeout: 1500 });
-      const managers = Array.isArray(res.data?.managers) ? res.data.managers : [];
+      const managers = (
+        Array.isArray(res.data?.managers) ? res.data.managers : []
+      ).filter((m: any) => !HIDDEN_MANAGER_SLUGS.has(m?.slug));
       EQUITY_CACHE = { at: now, data: managers };
       return managers;
     } catch {
