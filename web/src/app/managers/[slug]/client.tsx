@@ -186,7 +186,11 @@ export default function ManagerDetailClient({ slug }: Props) {
           </div>
           <div className="stat-item">
             <span className="stat-label">Sharpe</span>
-            <span className="stat-value tabular">{dp.sharpe.toFixed(2)}</span>
+            <span className="stat-value tabular">
+              {annReturn != null && annVol != null && annVol > 0
+                ? (annReturn / annVol).toFixed(2)
+                : dp.sharpe.toFixed(2)}
+            </span>
           </div>
           <div className="stat-item">
             <span className="stat-label">命中率</span>
