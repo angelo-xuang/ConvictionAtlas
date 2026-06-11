@@ -102,7 +102,26 @@ export default function ManagerDetailClient({ slug }: Props) {
   };
 
   const navPoints = manager.performanceSeries.map((p) => p.nav);
-  const dateLabels = manager.performanceSeries.map((p) => formatShortDate(p.pointAt));
+  const dateLabels = manager.performanceSeries.map((p) =>
+    String(p.pointAt).slice(0, 10),
+  );
+
+  // 年化收益/年化波动:从净值序列推算(252 交易日年化),不足 2 个点时不显示
+  const navClean = navPoints.filter(
+    (v): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0,
+  );
+  let annReturn: number | null = null;
+  let annVol: number | null = null;
+  if (navClean.length >= 2) {
+    const n = navClean.length - 1;
+    annReturn = Math.pow(navClean[n] / navClean[0], 252 / n) - 1;
+    const rets: number[] = [];
+    for (let i = 1; i < navClean.length; i++) rets.push(navClean[i] / navClean[i - 1] - 1);
+    const mean = rets.reduce((s, r) => s + r, 0) / rets.length;
+    const variance =
+      rets.reduce((s, r) => s + (r - mean) ** 2, 0) / Math.max(rets.length - 1, 1);
+    annVol = Math.sqrt(variance) * Math.sqrt(252);
+  }
   const perfTone: 'positive' | 'negative' | 'neutral' =
     dp.cumulativeReturn > 0 ? 'positive'
       : dp.cumulativeReturn < 0 ? 'negative'
@@ -147,6 +166,18 @@ export default function ManagerDetailClient({ slug }: Props) {
             <span className="stat-label">累计收益</span>
             <span className={`stat-value tabular ${getSignedClass(dp.cumulativeReturn)}`}>
               {formatReturn(dp.cumulativeReturn)}
+            </span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">年化收益</span>
+            <span className={`stat-value tabular ${annReturn != null ? getSignedClass(annReturn) : ''}`}>
+              {annReturn != null ? formatReturn(annReturn) : '—'}
+            </span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">年化波动</span>
+            <span className="stat-value tabular">
+              {annVol != null ? formatPercent(annVol * 100) : '—'}
             </span>
           </div>
           <div className="stat-item">

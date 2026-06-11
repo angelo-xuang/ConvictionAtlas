@@ -86,19 +86,28 @@ export function PerfLine({
   className,
 }: PerfLineProps) {
   const clean = cleanPoints(points);
-  const color = toneColor(tone);
 
+  // 投资笔记同款 ECharts 风格:默认蓝 #5470c6、可见日期轴、浅虚线网格、淡面积
+  const lineColor = '#5470c6';
   const options = useMemo<EChartsOption>(() => ({
-    grid: { top: 10, right: 10, bottom: 20, left: 50 },
+    grid: { top: 16, right: 16, bottom: 28, left: 8, containLabel: true },
     xAxis: {
       type: 'category',
-      show: false,
-      data: dateLabels?.length === clean.length ? dateLabels : undefined,
+      boundaryGap: false,
+      data: dateLabels?.length === clean.length ? dateLabels : clean.map((_, i) => `${i + 1}`),
+      axisLine: { lineStyle: { color: '#d1d5db' } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#9ca3af',
+        fontSize: 10,
+        hideOverlap: true,
+        formatter: (v: string) => v.slice(5),
+      },
     },
     yAxis: {
       type: 'value',
       scale: true,
-      splitLine: { lineStyle: { color: '#e5e7eb' } },
+      splitLine: { lineStyle: { color: '#eef0f4', type: 'dashed' } },
       axisLabel: {
         color: '#9ca3af',
         fontSize: 10,
@@ -110,6 +119,7 @@ export function PerfLine({
       backgroundColor: '#fff',
       borderColor: '#e5e7eb',
       textStyle: { color: '#111827', fontSize: 12 },
+      axisPointer: { type: 'line', lineStyle: { color: '#c0c4cc', type: 'dashed' } },
       formatter: (params: any) => {
         const p = Array.isArray(params) ? params[0] : params;
         const val = typeof p.value === 'object' ? (p.value as any).value : p.value;
@@ -117,23 +127,26 @@ export function PerfLine({
         return `<span style="color:#6b7280">${label}</span><br/><strong>${val.toFixed(2)}</strong>`;
       },
     },
+    dataZoom: clean.length > 250
+      ? [{ type: 'inside', start: 0, end: 100 }]
+      : undefined,
     series: [{
       type: 'line',
       data: clean,
-      smooth: 0.3,
+      smooth: false,
       showSymbol: false,
-      lineStyle: { width: 2, color },
-      itemStyle: { color },
+      lineStyle: { width: 2, color: lineColor },
+      itemStyle: { color: lineColor },
       areaStyle: showArea ? {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: color + '30' },
-          { offset: 1, color: color + '05' },
+          { offset: 0, color: lineColor + '26' },
+          { offset: 1, color: lineColor + '03' },
         ]),
       } : undefined,
     }],
     animation: true,
     animationDuration: 600,
-  }), [clean, dateLabels, color, showArea]);
+  }), [clean, dateLabels, showArea]);
 
   return <Chart options={options} height={height} className={className} />;
 }
