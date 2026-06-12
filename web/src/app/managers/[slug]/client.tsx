@@ -21,6 +21,11 @@ import type {
   PortfolioSnapshot,
 } from '../../../lib/types';
 
+// 股票类标的(US.AMD / SH.600519 等)没有 crypto 机会详情页, 渲染为纯文本不给链接
+function hasOpportunityPage(slug?: string): boolean {
+  return !!slug && !/^(US|SH|SZ|BJ|HK)\./i.test(slug);
+}
+
 function renderMarkdown(md: string): string {
   if (!md) return '';
   let html = md
@@ -410,12 +415,18 @@ export default function ManagerDetailClient({ slug }: Props) {
                     {manager.latestDecisions.map((d) => (
                       <tr key={d.id}>
                         <td>
-                          <Link
-                            href={`/opportunities/detail?slug=${d.opportunity.slug}`}
-                            className="table-link"
-                          >
-                            {d.opportunity.title}
-                          </Link>
+                          {hasOpportunityPage(d.opportunity.slug) ? (
+                            <Link
+                              href={`/opportunities/detail?slug=${d.opportunity.slug}`}
+                              className="table-link"
+                            >
+                              {d.opportunity.title}
+                            </Link>
+                          ) : (
+                            <span className="table-link" style={{ cursor: 'default' }}>
+                              {d.opportunity.title}
+                            </span>
+                          )}
                         </td>
                         <td>
                           <span className={`badge ${getDirectionClass(d.direction)}`}>
@@ -467,10 +478,12 @@ export default function ManagerDetailClient({ slug }: Props) {
                     <p className="muted text-sm">{memo.summary}</p>
                     <div className="flex items-center justify-between mt-2 text-xs muted">
                       <span>{formatDateTime(memo.createdAt)}</span>
-                      {memo.opportunity ? (
+                      {memo.opportunity && hasOpportunityPage(memo.opportunity.slug) ? (
                         <Link href={`/opportunities/detail?slug=${memo.opportunity.slug}`}>
                           {memo.opportunity.title}
                         </Link>
+                      ) : memo.opportunity ? (
+                        <span>{memo.opportunity.title}</span>
                       ) : (
                         <span>无关联标的</span>
                       )}
@@ -532,12 +545,18 @@ export default function ManagerDetailClient({ slug }: Props) {
                     <div key={pos.id} className="position-row portfolio-row">
                       <div className={`position-side ${isShort ? 'is-short' : 'is-long'}`} />
                       <div className="position-main">
-                        <Link
-                          href={`/opportunities/detail?slug=${pos.opportunity.slug}`}
-                          className="position-symbol"
-                        >
-                          {pos.opportunity.title}
-                        </Link>
+                        {hasOpportunityPage(pos.opportunity.slug) ? (
+                          <Link
+                            href={`/opportunities/detail?slug=${pos.opportunity.slug}`}
+                            className="position-symbol"
+                          >
+                            {pos.opportunity.title}
+                          </Link>
+                        ) : (
+                          <span className="position-symbol" style={{ cursor: 'default' }}>
+                            {pos.opportunity.title}
+                          </span>
+                        )}
                         <span className="muted text-xs tabular">
                           评分 {Number.isFinite(pos.convictionScore) ? pos.convictionScore.toFixed(3) : '--'}
                         </span>
