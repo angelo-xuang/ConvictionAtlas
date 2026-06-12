@@ -98,7 +98,7 @@ const EQUITY_STRATEGY_PROFILES: Record<
   'buffett-us': {
     style: '价值 · 巴菲特人格',
     riskLabel: '集中持有 · 低换手',
-    rebalanceCadence: '周频 · 每周一',
+    rebalanceCadence: '月频 · 每月首个周一',
     universe: '美股跨板块大盘(40只共享池)',
     memoStyle: 'LLM 人格驱动 · 巴菲特口吻',
     description:
@@ -112,7 +112,7 @@ const EQUITY_STRATEGY_PROFILES: Record<
       { label: '能力圈', value: '只买看得懂的生意;AI 半导体等高速变化标的归入"太难"篮子' },
       { label: '选股', value: '护城河 + 高 ROE + owner earnings + 合理估值,过闸门且 LLM 看多者' },
       { label: '加权', value: '按 LLM 信心归一,单票 ≤40%(打孔卡集中)' },
-      { label: '调仓频率', value: '周频(每周一);日内仅做 −25% 灾难止损' },
+      { label: '调仓频率', value: '月频(每月首个周一);日内仅做 −25% 灾难止损' },
       { label: '估值纪律', value: '以合理价格买伟大生意,不为便宜买平庸,不为贵错过伟大' },
       { label: '止损', value: '−25% 灾难线(巴菲特式宽止损,仅作生存底线)' },
       { label: '本金', value: '100 万 USD(净值看百分比)' },
@@ -121,7 +121,7 @@ const EQUITY_STRATEGY_PROFILES: Record<
   'wood-us': {
     style: '成长 · 木头姐人格',
     riskLabel: '满仓 · 高波动',
-    rebalanceCadence: '周频 · 每周一',
+    rebalanceCadence: '月频 · 每月首个周一',
     universe: '美股跨板块大盘(40只共享池)',
     memoStyle: 'LLM 人格驱动 · Cathie Wood 口吻',
     description:
@@ -136,7 +136,7 @@ const EQUITY_STRATEGY_PROFILES: Record<
       { label: '选股', value: '高营收增速 + 可规模化毛利 + 颠覆性赛道, 过闸门且 LLM 看多者' },
       { label: '估值观', value: '不用当前 PE / 盈利 / 负债否决——看 5 年 TAM 与成本曲线轨迹' },
       { label: '加权', value: '按 LLM 信心归一, 单票 ≤40%' },
-      { label: '调仓频率', value: '周频(每周一); 日内仅做 −25% 灾难止损' },
+      { label: '调仓频率', value: '月频(每月首个周一); 日内仅做 −25% 灾难止损' },
       { label: '风险', value: '主动承担高波动, 愿穿越回撤换长期超指数级增长' },
       { label: '本金', value: '100 万 USD(净值看百分比)' },
     ],
@@ -144,7 +144,7 @@ const EQUITY_STRATEGY_PROFILES: Record<
   'burry-us': {
     style: '深度价值 · Burry 人格',
     riskLabel: '逆向 · 多空(做空泡沫)',
-    rebalanceCadence: '周频 · 每周一',
+    rebalanceCadence: '月频 · 每月首个周一',
     universe: '美股跨板块大盘(40只共享池)',
     memoStyle: 'LLM 人格驱动 · Michael Burry 口吻',
     description:
@@ -160,7 +160,7 @@ const EQUITY_STRATEGY_PROFILES: Record<
       { label: '做空', value: '泡沫筛(高 PE / 高 P/B / 低 FCF 收益率 / 无安全边际 / 叙事驱动)+ LLM 看空 → 真实建空头' },
       { label: '空头风控', value: '单只 ≤20% aum, 总做空 ≤50% aum, +25% 涨穿即回补止损' },
       { label: '现金观', value: '无够便宜多头、也无高信心做空时宁可持现金, 空仓不是失败是纪律' },
-      { label: '调仓频率', value: '周频(每周一); 日内做 −25%(多)/+25%(空) 灾难止损' },
+      { label: '调仓频率', value: '月频(每月首个周一); 日内做 −25%(多)/+25%(空) 灾难止损' },
       { label: '本金', value: '100 万 USD(净值看百分比)' },
     ],
   },
@@ -436,7 +436,7 @@ export class QueryService {
         (p: any, i: number) => ({
           id: `${m?.slug}-dec-${i}`,
           // 空头(qty<0)方向为看空; 多头看多
-          direction: ((Number(p?.qty) || 0) < 0 ? 'BEARISH' : 'BULLISH') as const,
+          direction: ((Number(p?.qty) || 0) < 0 ? 'BEARISH' : 'BULLISH') as 'BEARISH' | 'BULLISH',
           convictionScore: Math.abs(Number(p?.weight) || 0),
           targetWeight: Number(p?.weight) || 0,
           rationale: p?.note || '规则触发持仓',
