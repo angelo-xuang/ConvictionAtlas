@@ -116,22 +116,60 @@ export default function ManagerDetailClient({ slug }: Props) {
     annVol = Math.sqrt(variance) * Math.sqrt(252);
   }
 
-  // 逐年收益:每年末净值 / 上年末净值 - 1(首年以序列首点为基,末年为 YTD)
-  const yearlyReturns: { year: string; ret: number }[] = [];
+  // 逐年统计:收益 = 年末净值/上年末净值 - 1(首年以序列首点为基,末年为 YTD);
+  // 波动 = 年内日收益 std × √252;Sharpe = 年内日收益均值 × 252 / 波动;回撤 = 年内最大回撤
+  const yearlyStats: {
+    year: string;
+    ret: number;
+    sharpe: number | null;
+    vol: number | null;
+    mdd: number;
+  }[] = [];
   {
     const series = manager.performanceSeries
       .map((p) => ({ d: String(p.pointAt).slice(0, 10), nav: p.nav }))
       .filter((p) => Number.isFinite(p.nav) && p.nav > 0);
-    const lastNavByYear = new Map<string, number>();
-    for (const p of series) lastNavByYear.set(p.d.slice(0, 4), p.nav);
-    let prev = series.length ? series[0].nav : null;
-    for (const y of [...lastNavByYear.keys()].sort()) {
-      const end = lastNavByYear.get(y)!;
-      if (prev != null && prev > 0) yearlyReturns.push({ year: y, ret: end / prev - 1 });
-      prev = end;
+    const navsByYear = new Map<string, number[]>();
+    for (const p of series) {
+      const y = p.d.slice(0, 4);
+      if (!navsByYear.has(y)) navsByYear.set(y, []);
+      navsByYear.get(y)!.push(p.nav);
+    }
+    let prevEnd = series.length ? series[0].nav : null;
+    for (const y of [...navsByYear.keys()].sort()) {
+      const navs = navsByYear.get(y)!;
+      const end = navs[navs.length - 1];
+      if (prevEnd == null || prevEnd <= 0) {
+        prevEnd = end;
+        continue;
+      }
+      // 年内路径以上年末净值为起点,保证跨年缺口计入首日收益与回撤
+      const path = [prevEnd, ...navs];
+      const rets: number[] = [];
+      for (let i = 1; i < path.length; i++) rets.push(path[i] / path[i - 1] - 1);
+      let vol: number | null = null;
+      let sharpe: number | null = null;
+      if (rets.length >= 2) {
+        const mean = rets.reduce((s, r) => s + r, 0) / rets.length;
+        const variance =
+          rets.reduce((s, r) => s + (r - mean) ** 2, 0) / (rets.length - 1);
+        const v = Math.sqrt(variance) * Math.sqrt(252);
+        if (v > 0) {
+          vol = v;
+          sharpe = (mean * 252) / v;
+        }
+      }
+      let peak = path[0];
+      let mdd = 0;
+      for (const nav of path) {
+        if (nav > peak) peak = nav;
+        mdd = Math.min(mdd, nav / peak - 1);
+      }
+      yearlyStats.push({ year: y, ret: end / prevEnd - 1, sharpe, vol, mdd });
+      prevEnd = end;
     }
   }
-  const recentYears = yearlyReturns.slice(-6).reverse();
+  const recentYears = yearlyStats.slice(-6).reverse();
   const lastSeriesYear = dateLabels.length
     ? dateLabels[dateLabels.length - 1].slice(0, 4)
     : null;
@@ -211,27 +249,72 @@ export default function ManagerDetailClient({ slug }: Props) {
                     {annReturn != null ? formatReturn(annReturn) : '—'}
                   </strong>
                 </div>
+                <div>
+                  <span className="stat-label">Sharpe</span>
+                  <strong className="tabular" style={{ display: 'block', fontSize: '1.05rem' }}>
+                    {sharpeValue.toFixed(2)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="stat-label">年化波动</span>
+                  <strong className="tabular" style={{ display: 'block', fontSize: '1.05rem' }}>
+                    {annVol != null ? formatPercent(annVol * 100) : '—'}
+                  </strong>
+                </div>
+                <div>
+                  <span className="stat-label">回撤</span>
+                  <strong className="tabular" style={{ display: 'block', fontSize: '1.05rem' }}>
+                    {formatReturn(dp.drawdown)}
+                  </strong>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="manager-scoreboard">
             <div className="scoreboard-primary" style={{ paddingBottom: 8 }}>
-              <span className="stat-label">逐年收益</span>
+              <span className="stat-label">逐年表现</span>
               {recentYears.length > 0 ? (
                 <table style={{ width: '100%', marginTop: 6, borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      {['年份', '收益', 'Sharpe', '波动', '回撤'].map((h, i) => (
+                        <th
+                          key={h}
+                          className="muted"
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 500,
+                            padding: '2px 0',
+                            textAlign: i === 0 ? 'left' : 'right',
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
                   <tbody>
-                    {recentYears.map(({ year, ret }) => (
+                    {recentYears.map(({ year, ret, sharpe, vol, mdd }) => (
                       <tr key={year} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td className="muted tabular" style={{ fontSize: '0.8rem', padding: '4px 0' }}>
+                        <td className="muted tabular" style={{ fontSize: '0.78rem', padding: '4px 0' }}>
                           {year}
                           {year === lastSeriesYear ? ' YTD' : ''}
                         </td>
                         <td
                           className={`tabular ${getSignedClass(ret)}`}
-                          style={{ fontSize: '0.8rem', padding: '4px 0', textAlign: 'right', fontWeight: 600 }}
+                          style={{ fontSize: '0.78rem', padding: '4px 0', textAlign: 'right', fontWeight: 600 }}
                         >
                           {formatReturn(ret)}
+                        </td>
+                        <td className="tabular" style={{ fontSize: '0.78rem', padding: '4px 0 4px 10px', textAlign: 'right' }}>
+                          {sharpe != null ? sharpe.toFixed(2) : '—'}
+                        </td>
+                        <td className="tabular" style={{ fontSize: '0.78rem', padding: '4px 0 4px 10px', textAlign: 'right' }}>
+                          {vol != null ? formatPercent(vol * 100) : '—'}
+                        </td>
+                        <td className="tabular" style={{ fontSize: '0.78rem', padding: '4px 0 4px 10px', textAlign: 'right' }}>
+                          {formatReturn(mdd)}
                         </td>
                       </tr>
                     ))}
@@ -240,22 +323,6 @@ export default function ManagerDetailClient({ slug }: Props) {
               ) : (
                 <span className="muted text-xs">数据不足</span>
               )}
-            </div>
-            <div className="scoreboard-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-              <div className="scoreboard-cell">
-                <span className="stat-label">Sharpe</span>
-                <span className="scoreboard-value tabular">{sharpeValue.toFixed(2)}</span>
-              </div>
-              <div className="scoreboard-cell">
-                <span className="stat-label">年化波动</span>
-                <span className="scoreboard-value tabular">
-                  {annVol != null ? formatPercent(annVol * 100) : '—'}
-                </span>
-              </div>
-              <div className="scoreboard-cell">
-                <span className="stat-label">回撤</span>
-                <span className="scoreboard-value tabular">{formatReturn(dp.drawdown)}</span>
-              </div>
             </div>
           </div>
         </div>
