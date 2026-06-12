@@ -132,7 +132,6 @@ export default function ManagerDetailClient({ slug }: Props) {
     }
   }
   const recentYears = yearlyReturns.slice(-6).reverse();
-  const yearBarMax = Math.max(...recentYears.map((r) => Math.abs(r.ret)), 1e-4);
   const lastSeriesYear = dateLabels.length
     ? dateLabels[dateLabels.length - 1].slice(0, 4)
     : null;
@@ -220,31 +219,24 @@ export default function ManagerDetailClient({ slug }: Props) {
             <div className="scoreboard-primary" style={{ paddingBottom: 8 }}>
               <span className="stat-label">逐年收益</span>
               {recentYears.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
-                  {recentYears.map(({ year, ret }) => {
-                    const widthPct = Math.max((Math.abs(ret) / yearBarMax) * 100, 2);
-                    return (
-                      <div key={year} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span className="muted tabular text-xs" style={{ width: 64, flexShrink: 0 }}>
+                <table style={{ width: '100%', marginTop: 6, borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {recentYears.map(({ year, ret }) => (
+                      <tr key={year} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td className="muted tabular" style={{ fontSize: '0.8rem', padding: '4px 0' }}>
                           {year}
                           {year === lastSeriesYear ? ' YTD' : ''}
-                        </span>
-                        <div className="year-return-track" style={{ flex: 1 }}>
-                          <div
-                            className={`year-return-fill ${ret >= 0 ? 'is-positive' : 'is-negative'}`}
-                            style={{ width: `${widthPct}%` }}
-                          />
-                        </div>
-                        <span
-                          className={`tabular text-xs ${getSignedClass(ret)}`}
-                          style={{ width: 58, textAlign: 'right', fontWeight: 600, flexShrink: 0 }}
+                        </td>
+                        <td
+                          className={`tabular ${getSignedClass(ret)}`}
+                          style={{ fontSize: '0.8rem', padding: '4px 0', textAlign: 'right', fontWeight: 600 }}
                         >
                           {formatReturn(ret)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <span className="muted text-xs">数据不足</span>
               )}
@@ -299,13 +291,13 @@ export default function ManagerDetailClient({ slug }: Props) {
             <div className="card-header">
               <div>
                 <h2>业绩曲线</h2>
-                <span className="muted text-xs">净值曲线与年度拆分</span>
+                <span className="muted text-xs">净值曲线</span>
               </div>
               <span className="muted text-xs">
                 {dp.lookbackDays ? `${dp.lookbackDays.toFixed(0)}天回溯` : '回测'}
               </span>
             </div>
-            <div className="performance-grid">
+            <div>
               <div className="performance-chart-panel">
                 <div className="chart-area">
                   <PerfLine
@@ -326,35 +318,6 @@ export default function ManagerDetailClient({ slug }: Props) {
                 </div>
               </div>
 
-              {/* 逐年收益 */}
-              {recentYears.length > 0 && (
-                <div className="year-return-panel">
-                  <div className="year-return-title">逐年收益</div>
-                  {recentYears.map(({ year, ret }) => {
-                    const pos = ret >= 0;
-                    const widthPct = Math.max((Math.abs(ret) / yearBarMax) * 100, 2);
-                    return (
-                      <div key={year} className="year-return-row">
-                        <div className="flex justify-between text-xs">
-                          <span className="muted tabular">
-                            {year}
-                            {year === lastSeriesYear ? ' YTD' : ''}
-                          </span>
-                          <span className={`tabular ${getSignedClass(ret)}`} style={{ fontWeight: 600 }}>
-                            {formatReturn(ret)}
-                          </span>
-                        </div>
-                        <div className="year-return-track">
-                          <div
-                            className={`year-return-fill ${pos ? 'is-positive' : 'is-negative'}`}
-                            style={{ width: `${widthPct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           </div>
 
