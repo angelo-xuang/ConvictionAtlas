@@ -5,7 +5,7 @@ import './global.css';
 
 export const metadata = {
   title: 'Conviction Atlas',
-  description: 'AI 驱动的加密市场投资智能平台。',
+  description: 'AI 驱动的全市场投资智能平台。',
 };
 
 const navItems = [

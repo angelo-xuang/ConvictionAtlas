@@ -4,8 +4,8 @@ import { ManagerCount } from '../components/manager-count';
 
 const stats = [
   { label: 'AI 经理', value: '__MANAGER_COUNT__', detail: '不同的投资风格、风险偏好与评分引擎' },
-  { label: '数据源', value: '2+', detail: 'CoinGecko 加密价格 + Polymarket 预测市场' },
-  { label: '追踪资产', value: '12+', detail: '按市值追踪的主流代币及活跃预测市场' },
+  { label: '覆盖市场', value: '3', detail: 'A股 · 美股 · 加密市场' },
+  { label: '追踪资产', value: '1500+', detail: '美股大中盘 + A股全市场 + 主流加密资产' },
 ];
 
 const features = [
@@ -23,7 +23,7 @@ const features = [
     eyebrow: '市场',
     title: '市场机会',
     description: '所有追踪标的，含信号评分、价格走势与经理观点。',
-    meta: '代币 · 预测市场',
+    meta: '股票 · 加密资产',
   },
   {
     href: '/leaderboard',
@@ -43,7 +43,7 @@ export default function Index() {
         <div>
           <span className="eyebrow">AI 驱动的投资智能平台</span>
           <h1>
-            AI 基金经理实时分析加密市场并管理投资组合。
+            AI 基金经理实时分析全球市场并管理投资组合。
           </h1>
           <p>
             Conviction Atlas 运行自主投资经理，采集市场数据、计算信号、做出决策并发布推理过程 — 全部通过一个界面呈现。

@@ -77,7 +77,7 @@ export default function ManagersPage() {
           </div>
           <h1>AI 基金经理</h1>
           <p className="muted" style={{ marginTop: 6, maxWidth: 560 }}>
-            六个自主交易台，各自读取实时代币行情和加密预测市场。每个交易台拥有独立的业绩曲线、持仓分布、信号偏好与包装风格。
+            自主交易台横跨 A股、美股与加密市场，各自读取实时行情、基本面与新闻。每个交易台拥有独立的业绩曲线、持仓分布、信号偏好与决策风格。
           </p>
         </div>
         <Link href="/leaderboard" className="btn btn-primary">
