@@ -95,6 +95,29 @@ const EQUITY_STRATEGY_PROFILES: Record<
       { label: '本金', value: '500 万 CNY(净值看百分比)' },
     ],
   },
+  'serenity-us': {
+    style: '瓶颈猎手 · Serenity人格',
+    riskLabel: '硬科技 · 高弹性',
+    rebalanceCadence: '周频 · 每周一',
+    universe: '美股硬科技供应链(市值前1500池内域筛)',
+    memoStyle: 'LLM 人格驱动 · 供应链瓶颈视角',
+    description:
+      '蒸馏供应链分析师 Serenity(@aleabitoreddit)的瓶颈测绘框架(Chokepoint Theory): 从终端 AI 需求逆向到物理上最难扩产/最难替代的供应链卡点。量化预筛锁定硬科技域内"需求爆发 + 毛利定价权 + 盈利弹性"的标的, LLM 以瓶颈视角判定卡点强度与定价错位。每次调仓产出 Active Research 式调仓日记(错位/证据/催化剂/认错线)。',
+    signalMix: [
+      { name: '硬科技域 + 量化 checklist(增速/毛利/盈利弹性)', weight: 0.5 },
+      { name: 'LLM Serenity 人格瓶颈判断', weight: 0.5 },
+    ],
+    playbook: [
+      { label: '信号源', value: '能力域闸门(硬科技供应链) + 量化 checklist + DeepSeek Serenity 人格定夺' },
+      { label: '能力域', value: '只做有物理瓶颈的硬科技: 半导体/光通信/存储/AI基建硬件; 域外一票否决' },
+      { label: '选股', value: '需求爆发(营收增速>20%) + 瓶颈定价权(毛利>30%) + 涨价传导(盈利弹性)' },
+      { label: '排序', value: '营收增速优先, 同增速偏好更小市值(聚光灯外的角落)' },
+      { label: '加权', value: '按 LLM 信心归一, 单票 ≤40%' },
+      { label: '调仓频率', value: '周频(每周一); 日内仅做 −25% 灾难止损' },
+      { label: '调仓日记', value: '每次调仓产出人读日记: 错位 / 证据 / 催化剂 / 认错线' },
+      { label: '本金', value: '100 万 USD(净值看百分比)' },
+    ],
+  },
   'buffett-us': {
     style: '价值 · 巴菲特人格',
     riskLabel: '集中持有 · 低换手',
@@ -615,8 +638,22 @@ export class QueryService {
     const eq = await this.findEquityManager(slug);
     if (eq) {
       const now = new Date().toISOString();
+      // 契约 memos[] = 调仓日记(每次调仓 LLM 产出的人读决策记录), 置顶展示
+      const diaries = (Array.isArray(eq?.memos) ? eq.memos : []).map((mm: any, i: number) => ({
+        id: `${slug}-diary-${i}`,
+        managerId: slug,
+        opportunityId: null,
+        title: `调仓日记 · ${mm?.date ?? ''}`,
+        summary: '本次调仓的完整决策记录: 错位 / 证据 / 催化剂 / 认错线',
+        content: mm?.text ?? '',
+        isPremium: false,
+        accessTier: 'public',
+        generatedBy: 'llm',
+        createdAt: mm?.date ?? now,
+        opportunity: null,
+      }));
       const positions: any[] = Array.isArray(eq?.positions) ? eq.positions : [];
-      return positions
+      return [...diaries.reverse(), ...positions
         .filter((p) => p?.note)
         .map((p, i) => ({
           id: `${slug}-memo-${i}`,
@@ -640,7 +677,7 @@ export class QueryService {
             sourceKind: null,
             priceChange24h: Number(p?.pnl_pct ?? 0) * 100,
           },
-        }));
+        }))];
     }
     const manager = await this.getManagerOrThrow(slug);
     return this.prisma.memo.findMany({
