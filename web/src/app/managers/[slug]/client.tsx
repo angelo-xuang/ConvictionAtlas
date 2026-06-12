@@ -176,23 +176,83 @@ export default function ManagerDetailClient({ slug }: Props) {
                 {manager.universe && <span className="badge badge-neutral">{manager.universe}</span>}
               </div>
               <p className="manager-lede">{manager.description}</p>
+              <div
+                style={{
+                  marginTop: 12,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '12px 28px',
+                  padding: '10px 14px',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                }}
+              >
+                <div>
+                  <span className="stat-label">NAV</span>
+                  <strong className="tabular" style={{ display: 'block', fontSize: '1.05rem' }}>
+                    {formatMoney(dp.nav, manager.baseCcy)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="stat-label">累计收益</span>
+                  <strong
+                    className={`tabular ${getSignedClass(dp.cumulativeReturn)}`}
+                    style={{ display: 'block', fontSize: '1.05rem' }}
+                  >
+                    {formatReturn(dp.cumulativeReturn)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="stat-label">年化收益</span>
+                  <strong
+                    className={`tabular ${annReturn != null ? getSignedClass(annReturn) : ''}`}
+                    style={{ display: 'block', fontSize: '1.05rem' }}
+                  >
+                    {annReturn != null ? formatReturn(annReturn) : '—'}
+                  </strong>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="manager-scoreboard">
-            <div className="scoreboard-primary">
-              <span className="stat-label">NAV</span>
-              <span className="scoreboard-nav tabular">{formatMoney(dp.nav, manager.baseCcy)}</span>
-              <span className={`scoreboard-return tabular ${getSignedClass(dp.cumulativeReturn)}`}>
-                {formatReturn(dp.cumulativeReturn)} 累计收益
-              </span>
+            <div className="scoreboard-primary" style={{ paddingBottom: 8 }}>
+              <span className="stat-label">逐年收益</span>
+              {recentYears.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+                  {recentYears.map(({ year, ret }) => {
+                    const widthPct = Math.max((Math.abs(ret) / yearBarMax) * 100, 2);
+                    return (
+                      <div key={year} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="muted tabular text-xs" style={{ width: 64, flexShrink: 0 }}>
+                          {year}
+                          {year === lastSeriesYear ? ' YTD' : ''}
+                        </span>
+                        <div className="year-return-track" style={{ flex: 1 }}>
+                          <div
+                            className={`year-return-fill ${ret >= 0 ? 'is-positive' : 'is-negative'}`}
+                            style={{ width: `${widthPct}%` }}
+                          />
+                        </div>
+                        <span
+                          className={`tabular text-xs ${getSignedClass(ret)}`}
+                          style={{ width: 58, textAlign: 'right', fontWeight: 600, flexShrink: 0 }}
+                        >
+                          {formatReturn(ret)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span className="muted text-xs">数据不足</span>
+              )}
             </div>
-            <div className="scoreboard-grid">
+            <div className="scoreboard-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
               <div className="scoreboard-cell">
-                <span className="stat-label">年化收益</span>
-                <span className={`scoreboard-value tabular ${annReturn != null ? getSignedClass(annReturn) : ''}`}>
-                  {annReturn != null ? formatReturn(annReturn) : '—'}
-                </span>
+                <span className="stat-label">Sharpe</span>
+                <span className="scoreboard-value tabular">{sharpeValue.toFixed(2)}</span>
               </div>
               <div className="scoreboard-cell">
                 <span className="stat-label">年化波动</span>
@@ -203,10 +263,6 @@ export default function ManagerDetailClient({ slug }: Props) {
               <div className="scoreboard-cell">
                 <span className="stat-label">回撤</span>
                 <span className="scoreboard-value tabular">{formatReturn(dp.drawdown)}</span>
-              </div>
-              <div className="scoreboard-cell">
-                <span className="stat-label">Sharpe</span>
-                <span className="scoreboard-value tabular">{sharpeValue.toFixed(2)}</span>
               </div>
             </div>
           </div>
